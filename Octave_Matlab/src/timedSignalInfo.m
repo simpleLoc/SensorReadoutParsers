@@ -8,10 +8,10 @@
 % - startTs: Timestamp (in time-units) of the first sample in the dataIn signal.
 % - sampleInterval: Average amount of time-units (as in dataTimestamps) between two samples.
 function [startTs, sampleInterval, sampleIntervalDev] = timedSignalInfo(dataIn, dataTimestamps)
-	assert(rows(dataIn) == rows(dataTimestamps), 'dataIn and dataTimestamps have to have equal amount of rows');
-	assert(columns(dataTimestamps) == 1, 'dataTimestamps has to be a vector (= 1 column)');
+	assert(size(dataIn, 1) == size(dataTimestamps, 1), 'dataIn and dataTimestamps have to have equal amount of rows');
+	assert(size(dataTimestamps, 2) == 1, 'dataTimestamps has to be a vector (= 1 column)');
 	
 	startTs = dataTimestamps(1);
 	sampleInterval = (dataTimestamps(end) - dataTimestamps(1)) / length(dataTimestamps);
-	sampleIntervalDev = std(cumsum(dataTimestamps) - repmat(sampleInterval, rows(dataTimestamps), 1));
+	sampleIntervalDev = std(cumsum(dataTimestamps) - repmat(sampleInterval, size(dataTimestamps, 1), 1));
 end

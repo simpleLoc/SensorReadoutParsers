@@ -32,7 +32,7 @@ classdef ActionType
 			persistent value;
 			if isempty(value)
 				colorPalette = hsv(single(length(ActionType.ACTIONS)));
-				colorPalette = arrayfun(@(i) colorPalette(i,:), 1:rows(colorPalette), 'UniformOutput', false);
+				colorPalette = arrayfun(@(i) colorPalette(i,:), 1:size(colorPalette, 1), 'UniformOutput', false);
 				value = containers.Map({ActionType.ACTIONS{:,1}}, colorPalette);
 			end
 			result = value(uint32(v)); % uint32 OCTAVE BUG

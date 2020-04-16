@@ -116,8 +116,8 @@ classdef RecordingContainer < handle
 	% DEBUGGING METHODS
 	methods(Access = public, Static)
 		function plotCompareSensorStreams(sensorStream1, sensorStream2)
-			dimensionCnt = rows(sensorStream1);
-			assert(dimensionCnt == rows(sensorStream2), 'SensorStreams have to have same dimensionality');
+			dimensionCnt = size(sensorStream1, 1);
+			assert(dimensionCnt == size(sensorStream2, 1), 'SensorStreams have to have same dimensionality');
 			
 			figure('name', 'Compare SensorStreams');
 			for i = 1:dimensionCnt

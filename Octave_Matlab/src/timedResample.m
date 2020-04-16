@@ -19,11 +19,11 @@ function [dataOut, newTimestamps] = timedResample(dataIn, dataTimestamps, startT
 	
 	firstSampleIdx = find(dataTimestamps >= startTs, 1);
 	newSampleCnt = uint64((dataTimestamps(end) - startTs) / newSampleInterval);
-	dataOut = zeros(newSampleCnt, columns(dataIn));
+	dataOut = zeros(newSampleCnt, size(dataIn, 2));
 	newTimestamps = cumsum([startTs; repmat(newSampleInterval,newSampleCnt-1,1)]);
 	
 	jB = 1;
-	for i = 1:rows(newTimestamps)
+	for i = 1:size(newTimestamps, 1)
 		cTimestamp = newTimestamps(i); % Timestamp to interpolate in this iteration
 		while(dataTimestamps(jB+1) < cTimestamp)
 			jB = jB + 1;

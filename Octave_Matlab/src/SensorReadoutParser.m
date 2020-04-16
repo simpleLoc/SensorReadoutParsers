@@ -37,7 +37,7 @@ classdef SensorReadoutParser < handle
 				sprintf('[%s] Variance of timestamp-distances is high: [%.2f @ line %d]. Android may have stopped the App in between.\n',...
 				fileName, timestampVariance, tsVarIdx));
 			
-			data = zeros(rows(timestamps), 9, 'double');
+			data = zeros(size(timestamps, 1), 9, 'double');
 			
 			for sensorId = SensorType.getBaseSensors()
 				if sensorId == SensorType.PEDESTRIAN_ACTIVITY
@@ -73,7 +73,8 @@ classdef SensorReadoutParser < handle
 			dataContainer.setActivityChanges(activityChangeTimestamps, activityChanges);
 			
 			sensorIds = unique(evtIds);
-			sensorIds = sensorIds(sensorIds >= SensorType.SENSOR_START & sensorIds <= SensorType.SENSOR_END);
+			% filter for sensors with a fixed length of parameters
+			sensorIds = sensorIds(ismember(sensorIds, SensorType.BASE_SENSOR_LIST()));
 			
 			% apply sensorTypeIdWhitelist
 			sensorIds = sensorIds(ismember(sensorIds, self.sensorTypeIdWhitelist))';
@@ -102,10 +103,10 @@ classdef SensorReadoutParser < handle
 			wifiAdvertisements(:,1) = num2cell(timestamps(wifiIdxs));
 			
 			for i = 1:length(rawBtData)
-				btAdvertisements(i, 2:end) = textscan(rawBtData{i}, '%s;%d;%d', 'Delimiter', ';');
+				btAdvertisements(i, 2:end) = textscan(rawBtData{i}, '%s %d %d', 'Delimiter', ';');
 			end
 			for i = 1:length(rawWifiData)
-				wifiAdvertisements(i, 2:end) = textscan(rawWifiData{i}, '%s;%d;%d', 'Delimiter', ';');
+				wifiAdvertisements(i, 2:end) = textscan(rawWifiData{i}, '%s %d %d', 'Delimiter', ';');
 			end
 		end
 	end

@@ -1,6 +1,6 @@
 clear all;
 close all;
-loadSensorReadoutParser("src/");
+loadSensorReadoutParser('src/');
 
 % #########################################################################
 % # Config
@@ -15,8 +15,8 @@ sensorSelector = SensorSelector()...
 % #########################################################################
 % # Select File
 % #########################################################################
-[cutFile, cutFilePath] = uigetfile();
-assert(cutFile ~= 0, 'Did not select file in dialog.');
+[cutFile, cutFilePath] = uigetfile('*.csv');
+assert(ischar(cutFile), 'Did not select file in dialog.');
 fileName = [cutFilePath, cutFile];
 
 % #########################################################################
@@ -36,7 +36,7 @@ activityChangeCnt = length(activityChanges{1});
 activityColors = ActionType.actions2Color(activityChanges{2});
 
 figureHandle = figure('name', 'Recording');
-dimensionCnt = rows(recordingDataMatrix);
+dimensionCnt = size(recordingDataMatrix, 1);
 for d = 1:dimensionCnt
 	subplot(dimensionCnt, 1, d);
 	plot(recordingTimestamps, recordingDataMatrix(d,:));
@@ -52,5 +52,5 @@ for d = 1:dimensionCnt
 	end
 end
 
-# apply configured screen-size
+% apply configured screen-size
 set(figureHandle, 'Position', [0, 0, SCREEN_SIZE]);

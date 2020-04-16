@@ -33,13 +33,13 @@ classdef TimestampedRecordingContainer < handle
 		
 		function addChannel(self, sensorId, timestamps, data)
 			assert(~isempty(timestamps) && ~isempty(data), 'Timestamps or data is empty.');
-			assert(rows(timestamps) == rows(data), 'Timestamps has to have as many entries as data');
+			assert(size(timestamps, 1) == size(data, 1), 'Timestamps has to have as many entries as data');
 			assert(issorted(timestamps), 'Timestamps have to be ascendingly sorted.');
 			
 			self.channels{end+1, 1} = sensorId;
 			self.channels{end, 2} = timestamps;
 			self.channels{end, 3} = data;
-			self.channelIdxMap(sensorId) = rows(self.channels);
+			self.channelIdxMap(sensorId) = size(self.channels, 1);
 		end
 		
 		function setActivityChanges(self, timestamps, activityIds)
@@ -60,9 +60,9 @@ classdef TimestampedRecordingContainer < handle
 			% resample channels and add to new RecordingContainer
 			sampleCnt = Inf;
 			startTs = self.getStartTimestamp();
-			for ch = 1:rows(self.channels)
+			for ch = 1:size(self.channels, 1)
 				[resampledSensorStream, resampledTimestamps] = timedResample(self.channels{ch, 3}, self.channels{ch, 2}, startTs, sampleInterval);
-				sampleCnt = min(sampleCnt, rows(resampledSensorStream));
+				sampleCnt = min(sampleCnt, size(resampledSensorStream, 1));
 				dataContainer.addSensorStream(self.channels{ch, 1}, resampledSensorStream');
 			end
 			dataContainer.setDataTimestamps(resampledTimestamps(1:sampleCnt));
@@ -71,8 +71,8 @@ classdef TimestampedRecordingContainer < handle
 	
 	methods(Access = private)
 		function startTimestamp = getStartTimestamp(self)
-			startTimestamps = zeros(rows(self.channels), 1);
-			for c = 1:rows(self.channels)
+			startTimestamps = zeros(size(self.channels, 1), 1);
+			for c = 1:size(self.channels, 1)
 				startTimestamps(c) = self.channels{c,2}(1); % get first timestamp for channel
 			end
 			startTimestamp = max(startTimestamps);
