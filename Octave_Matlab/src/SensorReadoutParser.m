@@ -87,8 +87,8 @@ classdef SensorReadoutParser < handle
 			end
 		end
 		
-		% Parse bluetooth and wifi advertisement events
 		function [btAdvertisements, wifiAdvertisements] = parseRadio(self, fileName)
+			% PARSERADIO Parse radio-specific data from the recording (bluetooth & wifi advertisements)
 			[rawInputData, timestamps, evtIds] = self.parseFile(fileName);
 			
 			btIdxs = (evtIds == SensorType.IBEACON);
@@ -108,6 +108,18 @@ classdef SensorReadoutParser < handle
 			for i = 1:length(rawWifiData)
 				wifiAdvertisements(i, 2:end) = textscan(rawWifiData{i}, '%s %d %d', 'Delimiter', ';');
 			end
+		end
+		
+		function groundTruthPoints = parseGroundTruthPoints(self, fileName)
+			% PARSEGROUNDTRUTHPOINTS Parse groundtruth events from the recording
+			[rawInputData, timestamps, evtIds] = self.parseFile(fileName);
+			
+			gtIdxs = (evtIds == SensorType.GROUND_TRUTH);
+			gtData = rawInputData{3}(gtIdxs);
+			
+			groundTruthPoints = cell(sum(gtIdxs), 2);
+			groundTruthPoints(:,1) = num2cell(timestamps(gtIdxs));
+			groundTruthPoints(:,2) = cellfun(@(s) uint64(str2num(s)), gtData, 'UniformOutput', 0);
 		end
 	end
 	

@@ -14,6 +14,7 @@ fileName = [cutFilePath, cutFile];
 % #########################################################################
 parser = SensorReadoutParser(false);
 [btAdvertisements, wifiAdvertisements] = parser.parseRadio(fileName);
+groundTruthPoints = parser.parseGroundTruthPoints(fileName);
 
 % #########################################################################
 % # Iterate Bluetooth advertisements
@@ -44,3 +45,9 @@ for adIdx = 1:size(wifiAdvertisements, 1)
 		fprintf('\tAdv: %s (freq: %d) (rssi: %d)\n', macAddresses{s}, frequencies(s), rssis(s));
 	end
 end
+
+% #########################################################################
+% # Iterate Ground Truth Marker Events
+% #########################################################################
+printGroundTruthPoints = flip(groundTruthPoints, 2)';
+fprintf('- Reached Groundtruth Point %d (@ %f sec)\n', printGroundTruthPoints{:});
