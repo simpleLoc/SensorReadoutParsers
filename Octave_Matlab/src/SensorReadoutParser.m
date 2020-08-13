@@ -5,13 +5,22 @@ classdef SensorReadoutParser < handle
 	end
 	
 	properties(Access = private)
-		csvFiles = 0;
+		fileName = "";
+		# parsing options
 		sensorTypeIdWhitelist = [];
 		disableAsserts = false;
+		
+		# internally cached parse results
+		loaded = false;
+		rawInputData = [];
+		timestamps = [];
+		evtIds = [];
     end
 	
 	methods
-		function self = SensorReadoutParser(disableAsserts, sensorTypeIdWhitelist)
+		function self = SensorReadoutParser(fileName, disableAsserts, sensorTypeIdWhitelist)
+			assert(nargin > 0, "FILENAME argument required");
+			self.fileName = fileName;
 			if ~exist('sensorTypeIdWhitelist', 'var')
 				sensorTypeIdWhitelist = SensorType.SENSOR_START:SensorType.SENSOR_END;
 			end
@@ -26,36 +35,36 @@ classdef SensorReadoutParser < handle
 	
 	% Parser methods
 	methods
-		function dataContainer = parseSensorData(self, fileName)
-			dataContainer = TimestampedRecordingContainer(fileName);
+		function dataContainer = parseSensorData(self)
+			dataContainer = TimestampedRecordingContainer(self.fileName);
 			activityChanges = [];
 			activityChangeTimestamps = [];
 			
-			[rawInputData, timestamps, evtIds] = self.parseFile(fileName);
-			[timestampVariance, tsVarIdx] = max(diff(timestamps));
+			self.ensureLoaded();
+			[timestampVariance, tsVarIdx] = max(diff(self.timestamps));
 			assert(self.disableAsserts || timestampVariance < 0.3, ... %0.3 is already brutally bad - but it's necessary, unfortunately :(
 				sprintf('[%s] Variance of timestamp-distances is high: [%.2f @ line %d]. Android may have stopped the App in between.\n',...
-				fileName, timestampVariance, tsVarIdx));
+				self.fileName, timestampVariance, tsVarIdx));
 			
-			data = zeros(size(timestamps, 1), 9, 'double');
+			data = zeros(size(self.timestamps, 1), 9, 'double');
 			
 			for sensorId = SensorType.getBaseSensors()
 				if sensorId == SensorType.PEDESTRIAN_ACTIVITY
 					% Parse activity-markers manually, because there are
 					% strings in the csv, and matlab doesn't like that.
-					for i = find(evtIds == sensorId)'
-						parts = strsplit(rawInputData{3}{i}, ';');
+					for i = find(self.evtIds == sensorId)'
+						parts = strsplit(self.rawInputData{3}{i}, ';');
 						activityId = uint32(str2double(parts{2}));
 						activityChanges(end+1) = activityId;
-						activityChangeTimestamps(end+1) = timestamps(i);
+						activityChangeTimestamps(end+1) = self.timestamps(i);
 						data(i,1) = activityId;
 					end
 				else
-					accessIdxs = (evtIds == sensorId);
+					accessIdxs = (self.evtIds == sensorId);
 					sensorDims = SensorType.getSensorEventArgumentCnt(sensorId);
 
 					% Take value-strings from rawInputData and append to one
-					rawSensorData = strjoin({rawInputData{3}{accessIdxs}}, newline);
+					rawSensorData = strjoin({self.rawInputData{3}{accessIdxs}}, newline);
 
 					% Parse values from appended value-string for this sensor,
 					% and store in corresponding data-rows
@@ -72,7 +81,7 @@ classdef SensorReadoutParser < handle
 			
 			dataContainer.setActivityChanges(activityChangeTimestamps, activityChanges);
 			
-			sensorIds = unique(evtIds);
+			sensorIds = unique(self.evtIds);
 			% filter for sensors with a fixed length of parameters
 			sensorIds = sensorIds(ismember(sensorIds, SensorType.BASE_SENSOR_LIST()));
 			
@@ -81,26 +90,26 @@ classdef SensorReadoutParser < handle
 			assert(numel(sensorIds) > 0, 'Amount of exported sensors is 0. Recording does not contain any whitelisted sensors.');
 			
 			for sensorId = sensorIds
-				accessIdxs = (evtIds == sensorId);
+				accessIdxs = (self.evtIds == sensorId);
 				dimCnt = SensorType.getSensorEventArgumentCnt(sensorId);
-				dataContainer.addChannel(sensorId, timestamps(accessIdxs), data(accessIdxs, 1:dimCnt));
+				dataContainer.addChannel(sensorId, self.timestamps(accessIdxs), data(accessIdxs, 1:dimCnt));
 			end
 		end
 		
-		function [btAdvertisements, wifiAdvertisements] = parseRadio(self, fileName)
+		function [btAdvertisements, wifiAdvertisements] = parseRadio(self)
 			% PARSERADIO Parse radio-specific data from the recording (bluetooth & wifi advertisements)
-			[rawInputData, timestamps, evtIds] = self.parseFile(fileName);
+			self.ensureLoaded();
 			
-			btIdxs = (evtIds == SensorType.IBEACON);
-			rawBtData = rawInputData{3}(btIdxs);
-			wifiIdxs = (evtIds == SensorType.WIFI);
-			rawWifiData = rawInputData{3}(wifiIdxs);
+			btIdxs = (self.evtIds == SensorType.IBEACON);
+			rawBtData = self.rawInputData{3}(btIdxs);
+			wifiIdxs = (self.evtIds == SensorType.WIFI);
+			rawWifiData = self.rawInputData{3}(wifiIdxs);
 			
 			% allocate result structures and populate timestamps
 			btAdvertisements = cell(sum(btIdxs), 4);
-			btAdvertisements(:,1) = num2cell(timestamps(btIdxs));
+			btAdvertisements(:,1) = num2cell(self.timestamps(btIdxs));
 			wifiAdvertisements = cell(sum(wifiIdxs), 4);
-			wifiAdvertisements(:,1) = num2cell(timestamps(wifiIdxs));
+			wifiAdvertisements(:,1) = num2cell(self.timestamps(wifiIdxs));
 			
 			for i = 1:length(rawBtData)
 				btAdvertisements(i, 2:end) = textscan(rawBtData{i}, '%s %d %d', 'Delimiter', ';');
@@ -110,21 +119,30 @@ classdef SensorReadoutParser < handle
 			end
 		end
 		
-		function groundTruthPoints = parseGroundTruthPoints(self, fileName)
+		function groundTruthPoints = parseGroundTruthPoints(self)
 			% PARSEGROUNDTRUTHPOINTS Parse groundtruth events from the recording
-			[rawInputData, timestamps, evtIds] = self.parseFile(fileName);
+			self.ensureLoaded();
 			
-			gtIdxs = (evtIds == SensorType.GROUND_TRUTH);
-			gtData = rawInputData{3}(gtIdxs);
+			gtIdxs = (self.evtIds == SensorType.GROUND_TRUTH);
+			gtData = self.rawInputData{3}(gtIdxs);
 			
 			groundTruthPoints = cell(sum(gtIdxs), 2);
-			groundTruthPoints(:,1) = num2cell(timestamps(gtIdxs));
+			groundTruthPoints(:,1) = num2cell(self.timestamps(gtIdxs));
 			groundTruthPoints(:,2) = cellfun(@(s) uint64(str2num(s)), gtData, 'UniformOutput', 0);
 		end
 	end
 	
 	methods(Access = private)
-		function [rawInputData, timestamps, evtIds] = parseFile(self, fileName)
+		function ensureLoaded(self)
+			if(self.loaded == false)
+				[self.rawInputData, self.timestamps, self.evtIds] = SensorReadoutParser.parseFile(self.fileName, self.disableAsserts);
+				self.loaded = true;
+			end
+		end
+	end
+	
+	methods(Access = private, Static)
+		function [rawInputData, timestamps, evtIds] = parseFile(fileName, disableAsserts)
 			% parse activity ids / labels
 			fid = fopen(fileName, 'r');
 			if fid == -1
@@ -135,7 +153,7 @@ classdef SensorReadoutParser < handle
 			
 			timestamps = rawInputData{1} * SensorReadoutParser.TIMESTAMP_MULTIPLIER;
 			if ~issorted(timestamps)
-				if self.disableAsserts
+				if disableAsserts
 					[timestamps, sortIdxs] = sort(timestamps);
 					rawInputData = cellfun(@(c) c(sortIdxs), rawInputData, 'UniformOutput', false);
 				else

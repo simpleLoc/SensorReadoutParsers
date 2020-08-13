@@ -12,9 +12,9 @@ fileName = [cutFilePath, cutFile];
 % #########################################################################
 % # Parse & Resample
 % #########################################################################
-parser = SensorReadoutParser(false);
-[btAdvertisements, wifiAdvertisements] = parser.parseRadio(fileName);
-groundTruthPoints = parser.parseGroundTruthPoints(fileName);
+parser = SensorReadoutParser(fileName, false);
+[btAdvertisements, wifiAdvertisements] = parser.parseRadio();
+groundTruthPoints = parser.parseGroundTruthPoints();
 
 % #########################################################################
 % # Iterate Bluetooth advertisements

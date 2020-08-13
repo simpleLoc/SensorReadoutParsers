@@ -22,8 +22,8 @@ fileName = [cutFilePath, cutFile];
 % #########################################################################
 % # Parse & Resample
 % #########################################################################
-parser = SensorReadoutParser(false);
-timestampedSensorData = parser.parseSensorData(fileName);
+parser = SensorReadoutParser(fileName, false);
+timestampedSensorData = parser.parseSensorData();
 recording = timestampedSensorData.resampleIntoDataContainer(SAMPLE_INTERVAL);
 
 % #########################################################################
