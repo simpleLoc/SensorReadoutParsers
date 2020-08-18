@@ -6,11 +6,11 @@ classdef SensorReadoutParser < handle
 	
 	properties(Access = private)
 		fileName = "";
-		# parsing options
+		% parsing options
 		sensorTypeIdWhitelist = [];
 		disableAsserts = false;
 		
-		# internally cached parse results
+		% internally cached parse results
 		loaded = false;
 		rawInputData = [];
 		timestamps = [];
