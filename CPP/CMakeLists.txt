@@ -10,13 +10,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(WITH_TESTS "Whether to build tests" OFF)
 
 # LIBRARY
-file(GLOB PARSER_SOURCES "src/*.cpp")
-file(GLOB_RECURSE PARSER_HEADERS "include/*.h")
-add_library(SensorReadoutParser SHARED ${PARSER_SOURCES} ${PARSER_HEADERS})
+set(SENSORREADOUTPARSER_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
+file(GLOB SENSORREADOUTPARSER_SOURCES "src/*.cpp")
+file(GLOB_RECURSE SENSORREADOUTPARSER_HEADERS "${SENSORREADOUTPARSER_INCLUDE_DIR}/*.h")
+add_library(SensorReadoutParser SHARED ${SENSORREADOUTPARSER_SOURCES} ${SENSORREADOUTPARSER_HEADERS})
 target_include_directories(SensorReadoutParser PUBLIC "include/")
 target_compile_definitions(SensorReadoutParser PRIVATE SENSORREADOUTPARSER_LIBRARY)
 
 # UNIT TESTS
 if(WITH_TESTS)
-    add_subdirectory(test)
+	add_subdirectory(test)
 endif()
