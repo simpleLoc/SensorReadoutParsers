@@ -20,20 +20,12 @@ namespace _internal {
 	#define exceptWhen(cond, exceptionStr) if((cond)) { throw std::runtime_error(exceptionStr); }
 
 	template<typename TValue>
-	TValue from_string_view(const std::string_view& str, const char* format) {
+	TValue fromStringView(const std::string_view& str, const char* format) {
 		TValue result;
 		exceptAssert(sscanf(str.data(), format, &result) == 1, "Failed to parse token to value");
 		return result;
 	}
-	template<typename TValue> TValue from_string_view(const std::string_view& str) { return TValue::unimplemented_function(); }
-
-	#define IMPLEMENT_FROM_STRINGVIEW_NUMERIC(numberType, sscanfParameter) \
-		template<> numberType from_string_view<numberType>(const std::string_view& str) { return from_string_view<numberType>(str, "%" sscanfParameter); }
-
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint32_t, SCNu32);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int32_t, SCNd32);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint64_t, SCNu64);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int64_t, SCNd64);
+	template<typename TValue> TValue fromStringView(const std::string_view& str) { return TValue::unimplemented_function(); }
 
 	template<const char SEPERATOR>
 	class Tokenizer {
@@ -66,7 +58,7 @@ namespace _internal {
 		}
 
 		template<typename TValue> TValue nextAs() {
-			return from_string_view<TValue>(next());
+			return fromStringView<TValue>(next());
 		}
 
 		void skipNext() {

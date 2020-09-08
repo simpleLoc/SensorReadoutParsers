@@ -6,6 +6,16 @@ namespace SensorReadoutParser {
 
 using namespace _internal;
 
+namespace _internal {
+	#define IMPLEMENT_FROM_STRINGVIEW_NUMERIC(numberType, sscanfParameter) \
+		template<> numberType fromStringView<numberType>(const std::string_view& str) { return fromStringView<numberType>(str, "%" sscanfParameter); }
+
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint32_t, SCNu32);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int32_t, SCNd32);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint64_t, SCNu64);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int64_t, SCNd64);
+}
+
 // ###########
 // # BaseTypes
 // ######################
