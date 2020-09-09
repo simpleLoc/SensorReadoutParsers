@@ -218,6 +218,17 @@ struct NumericSensorEventBase {
 
 	//static_assert (sizeof(Self) == (sizeof(NumericValue) * ARG_CNT), "Struct size and argument count do not match.");
 
+	template<const size_t ARGIDX>
+	NumericValue& getValue() {
+		NumericValue* valuePtr = reinterpret_cast<NumericValue*>(this);
+		return valuePtr[ARGIDX];
+	}
+	template<const size_t ARGIDX>
+	const NumericValue& getValue() const {
+		const NumericValue* valuePtr = reinterpret_cast<const NumericValue*>(this);
+		return valuePtr[ARGIDX];
+	}
+
 	void parse(const std::string& parameterString) {
 		NumericValue* resultPtr = reinterpret_cast<NumericValue*>(this);
 		std::stringstream stream(parameterString);
@@ -361,6 +372,7 @@ class AggregatingParser {
 
 public:
 	using AggregatedParseResult = std::vector<SensorEvent>;
+	using AggregatedRawParseResult = std::vector<RawSensorEvent>;
 
 private:
 	VisitingParser parser;
@@ -369,6 +381,7 @@ public:
 	AggregatingParser(std::istream& stream);
 
 	AggregatedParseResult parse();
+	AggregatedRawParseResult parseRaw();
 };
 
 }

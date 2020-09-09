@@ -251,5 +251,13 @@ AggregatingParser::AggregatedParseResult AggregatingParser::parse() {
 	}
 	return result;
 }
+AggregatingParser::AggregatedRawParseResult AggregatingParser::parseRaw() {
+	AggregatedRawParseResult result;
+	RawSensorEvent rawSensorEvent;
+	while(parser.nextLine(rawSensorEvent)) {
+		result.push_back(rawSensorEvent);
+	}
+	return result;
+}
 
 }
