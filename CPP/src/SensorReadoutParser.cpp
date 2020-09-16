@@ -260,4 +260,19 @@ AggregatingParser::AggregatedRawParseResult AggregatingParser::parseRaw() {
 	return result;
 }
 
+
+
+// ###########
+// # Serializer
+// ######################
+
+Serializer::Serializer(std::ostream &stream) : stream(stream) {}
+
+void Serializer::write(const RawSensorEvent &sensorEvent) {
+	stream << sensorEvent.timestamp << ";";
+	stream << sensorEvent.eventId << ";";
+	stream << sensorEvent.parameterString << std::endl;
+	exceptAssert(stream.good(), "I/O error");
+}
+
 }

@@ -384,4 +384,21 @@ public:
 	AggregatedRawParseResult parseRaw();
 };
 
+
+
+// ###########
+// # Serializer
+// ######################
+class Serializer {
+
+private: // Serializer state
+	std::ostream& stream;
+
+public:
+	Serializer(std::ostream& stream);
+
+	void write(const RawSensorEvent& sensorEvent);
+
+};
+
 }
