@@ -1,8 +1,9 @@
 classdef SensorType
 	
 	properties (Access = private, Constant)
-		% start with GROUND_TRUTH_PATH(=-1) => right shift by +2
-		argCntLookup = [2, ...	% GROUND_TRUTH_PATH
+		% start with FILE_METADATA(=-2) => right shift by +3
+		argCntLookup = [-1, ...	% FILE_METADATA
+						2, ...	% GROUND_TRUTH_PATH
 						3, ...	% ACCELEROMETER
 						3, ...	% GRAVITY
 						3, ...	% LINEAR_ACCELERATION
@@ -56,7 +57,8 @@ classdef SensorType
 		
 		PEDESTRIAN_ACTIVITY = 50,
 		GROUND_TRUTH = 99,
-		GROUND_TRUTH_PATH = -1
+		GROUND_TRUTH_PATH = -1,
+		FILE_METADATA = -2
 	end
 	
 	% COMPUTED PROPERTIES (for octave compatibility)
@@ -64,7 +66,7 @@ classdef SensorType
 		function result = BASE_SENSOR_LIST()
 			persistent value;
 			if isempty(value)
-				value = find(SensorType.argCntLookup > 0) - 2;
+				value = find(SensorType.argCntLookup > 0) - 3;
 			end
 			result = value;
 		end
@@ -83,7 +85,7 @@ classdef SensorType
 		end
 				
 		function argCnt = getSensorEventArgumentCnt(sensorTypeId)
-			argCnt = SensorType.argCntLookup(sensorTypeId + 2);
+			argCnt = SensorType.argCntLookup(sensorTypeId + 3);
 		end
 	end
 end

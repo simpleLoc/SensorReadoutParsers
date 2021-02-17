@@ -35,6 +35,16 @@ classdef SensorReadoutParser < handle
 	
 	% Parser methods
 	methods
+		function [date, person, comment] = getMetadata(self)
+			self.ensureLoaded();
+			metadataEntryIdx = find(self.rawInputData{2} == SensorType.FILE_METADATA);
+			metadataStr = self.rawInputData{3}{metadataEntryIdx};
+			metadataParts = strsplit(metadataStr, ';');
+			date = metadataParts{1};
+			person = metadataParts{2};
+			comment = strjoin(metadataParts(3:end), ';');
+		end
+		
 		function dataContainer = parseSensorData(self)
 			dataContainer = TimestampedRecordingContainer(self.fileName);
 			activityChanges = [];
