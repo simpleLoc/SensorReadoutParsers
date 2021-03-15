@@ -45,6 +45,11 @@ classdef SensorReadoutParser < handle
 			comment = strjoin(metadataParts(3:end), ';');
 		end
 		
+		function timestamps = getTimestamps(self)
+			self.ensureLoaded();
+			timestamps = self.timestamps;
+		end
+		
 		function dataContainer = parseSensorData(self)
 			dataContainer = TimestampedRecordingContainer(self.fileName);
 			activityChanges = [];
@@ -106,7 +111,7 @@ classdef SensorReadoutParser < handle
 			end
 		end
 		
-		function [btAdvertisements, wifiAdvertisements] = parseRadio(self)
+		function [btAdvertisements, wifiAdvertisements, uwbMeasurements] = parseRadio(self)
 			% PARSERADIO Parse radio-specific data from the recording (bluetooth & wifi advertisements)
 			self.ensureLoaded();
 			
@@ -114,18 +119,30 @@ classdef SensorReadoutParser < handle
 			rawBtData = self.rawInputData{3}(btIdxs);
 			wifiIdxs = (self.evtIds == SensorType.WIFI);
 			rawWifiData = self.rawInputData{3}(wifiIdxs);
+			uwbIdxs = (self.evtIds == SensorType.DECAWAVE_UWB);
+			rawUwbData = self.rawInputData{3}(uwbIdxs);
 			
 			% allocate result structures and populate timestamps
 			btAdvertisements = cell(sum(btIdxs), 4);
 			btAdvertisements(:,1) = num2cell(self.timestamps(btIdxs));
 			wifiAdvertisements = cell(sum(wifiIdxs), 4);
 			wifiAdvertisements(:,1) = num2cell(self.timestamps(wifiIdxs));
+			% x,y,z,quality, [id,dist,qual]
+			uwbMeasurements = cell(sum(uwbIdxs), 6);
+			uwbMeasurements(:,1) = num2cell(self.timestamps(uwbIdxs));
 			
 			for i = 1:length(rawBtData)
 				btAdvertisements(i, 2:end) = textscan(rawBtData{i}, '%s %d %d', 'Delimiter', ';');
 			end
 			for i = 1:length(rawWifiData)
 				wifiAdvertisements(i, 2:end) = textscan(rawWifiData{i}, '%s %d %d', 'Delimiter', ';');
+			end
+			for i = 1:length(rawUwbData)
+				header = sscanf(rawUwbData{i}, '%f;%f;%f;%d;%s')';
+				uwbMeasurements(i, 2:5) = num2cell(header(1:4));
+				distancesStr = char(header(5:end));
+				distances = textscan(distancesStr, '%d %d %d', 'Delimiter', ';');
+				uwbMeasurements(i, 6) = [distances{:}];
 			end
 		end
 		

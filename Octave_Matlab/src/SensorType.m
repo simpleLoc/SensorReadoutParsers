@@ -23,7 +23,9 @@ classdef SensorType
 						-1, ...	% GPS
 						-1, ...	% WIFIRTT
 						3,	...	% GAME_ROTATION_VECTOR
-						zeros(1, 31), ...
+						-1, ... % EDDISTONE_UUID
+						-1, ... % DECAWAVE_UWB
+						zeros(1, 29), ...
 						1, ...	% PEDESTRIAN_ACTIVITY
 						zeros(1, 48), ...
 						1];		% GROUND_TRUTH
@@ -51,8 +53,10 @@ classdef SensorType
 		GPS = 16,
 		WIFIRTT = 17,
 		GAME_ROTATION_VECTOR = 18,
+		EDDISTONE_UUID = 19,
+		DECAWAVE_UWB = 20,
 		%%%%%%%%%%%%%%%%%%
-		SENSOR_END = 18, % last sensor-id
+		SENSOR_END = 20, % last sensor-id
 		
 		
 		PEDESTRIAN_ACTIVITY = 50,
