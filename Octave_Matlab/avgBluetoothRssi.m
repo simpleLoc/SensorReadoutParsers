@@ -22,7 +22,6 @@ parser = SensorReadoutParser(fileName, false);
 groundTruthPoints = parser.parseGroundTruthPoints();
 timestamps = parser.getTimestamps();
 
-btAdvMacs = [btAdvertisements{:, 2}];
-accessIdxs = strcmp(btAdvMacs, MAC_FILTER);
+accessIdxs = strcmp(btAdvertisements(:, 2), MAC_FILTER);
 mean([btAdvertisements{accessIdxs, 3}])
 plot([btAdvertisements{accessIdxs, 3}])

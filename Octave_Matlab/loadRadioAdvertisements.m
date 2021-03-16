@@ -21,14 +21,11 @@ groundTruthPoints = parser.parseGroundTruthPoints();
 % #########################################################################
 for adIdx = 1:size(btAdvertisements, 1)
 	timestamp = btAdvertisements{adIdx, 1};
-	macAddresses = btAdvertisements{adIdx, 2};
+	macAddress = btAdvertisements{adIdx, 2};
 	rssis = btAdvertisements{adIdx, 3};
 	txPower = btAdvertisements{adIdx, 4};
 
-	fprintf('\n\n##### Advertisement (@ %f sec)\n', timestamp);
-	for s = 1:length(macAddresses)
-		fprintf('\tAdv: %s (rssi: %d) (txPwr: %d)\n', macAddresses{s}, rssis(s), txPower(s));
-	end
+	fprintf('\tAdv: %s (rssi: %d) (txPwr: %d)\n', macAddress, rssis, txPower);
 end
 
 % #########################################################################
