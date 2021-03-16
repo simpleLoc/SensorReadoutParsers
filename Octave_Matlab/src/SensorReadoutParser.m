@@ -39,7 +39,7 @@ classdef SensorReadoutParser < handle
 			self.ensureLoaded();
 			metadataEntryIdx = find(self.rawInputData{2} == SensorType.FILE_METADATA);
 			metadataStr = self.rawInputData{3}{metadataEntryIdx};
-			metadataParts = strsplit(metadataStr, ';');
+			metadataParts = strsplit(metadataStr, ';', 'CollapseDelimiters', false);
 			date = metadataParts{1};
 			person = metadataParts{2};
 			comment = strjoin(metadataParts(3:end), ';');
@@ -123,20 +123,25 @@ classdef SensorReadoutParser < handle
 			rawUwbData = self.rawInputData{3}(uwbIdxs);
 			
 			% allocate result structures and populate timestamps
-			btAdvertisements = cell(sum(btIdxs), 4);
+			btAdvertisements = cell(rows(rawBtData), 4);
 			btAdvertisements(:,1) = num2cell(self.timestamps(btIdxs));
-			wifiAdvertisements = cell(sum(wifiIdxs), 4);
+			wifiAdvertisements = cell(rows(rawWifiData), 4);
 			wifiAdvertisements(:,1) = num2cell(self.timestamps(wifiIdxs));
 			% x,y,z,quality, [id,dist,qual]
-			uwbMeasurements = cell(sum(uwbIdxs), 6);
+			uwbMeasurements = cell(rows(rawUwbData), 6);
 			uwbMeasurements(:,1) = num2cell(self.timestamps(uwbIdxs));
 			
-			for i = 1:length(rawBtData)
-				btAdvertisements(i, 2:end) = textscan(rawBtData{i}, '%s %d %d', 'Delimiter', ';');
-			end
+			% parse bluetooth
+			rawBtData = textscan(strjoin(rawBtData, '\n'), '%s %d %d', 'Delimiter', ';');
+			btAdvertisements(:, 2) = rawBtData{1};
+			btAdvertisements(:, 3:4) = num2cell([rawBtData{2:3}]);
+
+			% parse wifi - each wifi line has multiple advertisements, thus we need
+			% the loop here.
 			for i = 1:length(rawWifiData)
 				wifiAdvertisements(i, 2:end) = textscan(rawWifiData{i}, '%s %d %d', 'Delimiter', ';');
 			end
+			
 			for i = 1:length(rawUwbData)
 				header = sscanf(rawUwbData{i}, '%f;%f;%f;%d;%s')';
 				uwbMeasurements(i, 2:5) = num2cell(header(1:4));
