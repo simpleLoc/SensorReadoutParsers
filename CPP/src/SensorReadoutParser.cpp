@@ -10,10 +10,22 @@ namespace _internal {
 	#define IMPLEMENT_FROM_STRINGVIEW_NUMERIC(numberType, sscanfParameter) \
 		template<> numberType fromStringView<numberType>(const std::string_view& str) { return fromStringView<numberType>(str, "%" sscanfParameter); }
 
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint8_t, SCNu8);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int8_t, SCNd8);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint16_t, SCNu16);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int16_t, SCNd16);
 	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint32_t, SCNu32);
 	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int32_t, SCNd32);
 	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint64_t, SCNu64);
 	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int64_t, SCNd64);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(float, "f");
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(double, "lf");
+
+	template<> UUID fromStringView<UUID>(const std::string_view& str) {
+		UUID uuid;
+		exceptAssert(sscanf(str.data(), "%16s", &uuid[0]) == 1, "Failed to parse uuid to value");
+		return uuid;
+	}
 }
 
 // ###########
@@ -68,31 +80,7 @@ bool MacAddress::operator==(const MacAddress &o) {
 // # ParsedModels
 // ######################
 
-//void WifiEvent::parse(const std::string &parameterString) {
-//	std::string macBuffer;
-//	macBuffer.resize(MacAddress::STRING_LENGTH_SHORT);
-//	WifiAdvertisement advertisement;
-//	char delimiter;
-
-//	std::stringstream paramStream(parameterString);
-//	while(paramStream.good()) {
-//		paramStream.read(&macBuffer[0], static_cast<std::streamsize>(macBuffer.size()));
-//		// eof is only set after one tried to read over the actually contained data
-//		// so we have to check our first read operation.
-//		if(!paramStream.good()) { return; }
-//		paramStream >> delimiter >> advertisement.channelFreq;
-//		exceptAssert(!paramStream.fail() && delimiter == ';', "Failed parsing WifiAdvertisement");
-//		paramStream >> delimiter >> advertisement.rssi;
-//		exceptAssert(!paramStream.fail() && delimiter == ';', "Failed parsing WifiAdvertisement");
-//		// trailing semicolon of last entry is optional - remove if found
-//		if(!paramStream.eof()) { paramStream.read(&delimiter, 1); }
-
-//		advertisement.mac = MacAddress::fromString(macBuffer);
-//		advertisements.push_back(advertisement);
-//	}
-//}
-
-void WifiEvent::parse(const std::string &parameterString) {
+void WifiEvent::parse(const std::string& parameterString) {
 	Tokenizer<';'> tokenizer(parameterString);
 	WifiAdvertisement advertisement;
 
@@ -109,7 +97,7 @@ void WifiEvent::parse(const std::string &parameterString) {
 	}
 }
 
-void BLEEvent::parse(const std::string &parameterString) {
+void BLEEvent::parse(const std::string& parameterString) {
 	exceptAssert(parameterString.size() > 14, "Bluetooth event does not seem to have all required fields");
 	// Parse undelimited mac address
 	std::string_view macView = std::string_view(parameterString).substr(0, 12);
@@ -117,23 +105,57 @@ void BLEEvent::parse(const std::string &parameterString) {
 	exceptAssert(sscanf(&parameterString[12], ";%d;%d", &rssi, &txPower) == 2, "Parsing Bluetooth advertisement event failed");
 }
 
-void GPSEvent::parse(const std::string &parameterString) {
+void GPSEvent::parse(const std::string& parameterString) {
 	exceptWhen(true, "Not implemented yet.");
 	//TODO: IMPLEMENT
 }
 
-void WifiRTTEvent::parse(const std::string &parameterString) {
+void WifiRTTEvent::parse(const std::string& parameterString) {
 	exceptWhen(true, "Not implemented yet.");
 	//TODO: IMPLEMENT
 }
 
-void PedestrianActivityEvent::parse(const std::string &parameterString) {
+void EddystoneUIDEvent::parse(const std::string& parameterString) {
+	exceptAssert(parameterString.size() > 32, "EddystoneUID event does not seem to have all required fields");
+	// Parse undelimited mac address
+	std::string_view macView = std::string_view(parameterString).substr(0, 12);
+	mac = MacAddress::fromString(macView);
+
+	Tokenizer<';'> tokenizer(std::string_view(parameterString).substr(13));
+	rssi = tokenizer.nextAs<Rssi>();
+	txPower = tokenizer.nextAs<BluetoothTxPower>();
+	uid = tokenizer.nextAs<UUID>();
+}
+
+void DecawaveUWBEvent::parse(const std::string& parameterString) {
+	Tokenizer<';'> tokenizer(parameterString);
+	// packet header (estimated position + quality)
+	x = tokenizer.nextAs<float>() / 1000.0; // mm to m
+	y = tokenizer.nextAs<float>() / 1000.0; // mm to m
+	z = tokenizer.nextAs<float>() / 1000.0; // mm to m
+	qualityFactor = tokenizer.nextAs<uint8_t>();
+	// single measurements from the paired tag to each anchor in the UWB network
+	try {
+		while(!tokenizer.isEOS()) {
+			DecawaveUWBMeasurement anchorMeasurement;
+			anchorMeasurement.nodeId = tokenizer.nextAs<uint16_t>();
+			anchorMeasurement.distance = tokenizer.nextAs<float>() / 1000.0; // mm to m
+			anchorMeasurement.qualityFactor = tokenizer.nextAs<uint8_t>();
+
+			anchorMeasurements.push_back(anchorMeasurement);
+		}
+	} catch (std::invalid_argument& e) {
+		throw std::runtime_error(e.what());
+	}
+}
+
+void PedestrianActivityEvent::parse(const std::string& parameterString) {
 	Tokenizer<';'> tokenizer(parameterString);
 	tokenizer.skipNext(); // skip activity name
 	activity = static_cast<PedestrianActivity>(tokenizer.nextAs<PedestrianActivityId>());
 }
 
-void GroundTruthEvent::parse(const std::string &parameterString) {
+void GroundTruthEvent::parse(const std::string& parameterString) {
 	try {
 		groundTruthId = std::stoul(parameterString);
 	} catch(...) {
@@ -141,7 +163,7 @@ void GroundTruthEvent::parse(const std::string &parameterString) {
 	}
 }
 
-void GroundTruthPathEvent::parse(const std::string &parameterString) {
+void GroundTruthPathEvent::parse(const std::string& parameterString) {
 	try {
 		Tokenizer<';'> tokenizer(parameterString);
 		pathId = tokenizer.nextAs<size_t>();
@@ -151,12 +173,12 @@ void GroundTruthPathEvent::parse(const std::string &parameterString) {
 	}
 }
 
-void FileMetadataEvent::parse(const std::string &parameterString) {
+void FileMetadataEvent::parse(const std::string& parameterString) {
 	Tokenizer<';'> tokenizer(parameterString);
 	date = tokenizer.next();
-	exceptAssert(date.length() > 0, "FileMetadata date is empty.");
 	person = tokenizer.next();
 	comment = tokenizer.remainder();
+	exceptAssert(date.length() > 0, "FileMetadata date is empty.");
 }
 
 SensorEvent SensorEvent::parse(const RawSensorEvent &rawEvent) {
@@ -191,6 +213,9 @@ SensorEvent SensorEvent::parse(const RawSensorEvent &rawEvent) {
 		SENSOR_EVENT_PARSE_CASE(EventType::GPS, GPSEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::WifiRTT, WifiRTTEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::GameRotationVector, GameRotationVectorEvent)
+		SENSOR_EVENT_PARSE_CASE(EventType::EddystoneUID, EddystoneUIDEvent)
+		SENSOR_EVENT_PARSE_CASE(EventType::DecawaveUWB, DecawaveUWBEvent)
+		// Special events
 		SENSOR_EVENT_PARSE_CASE(EventType::PedestrianActivity, PedestrianActivityEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::GroundTruth, GroundTruthEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::GroundTruthPath, GroundTruthPathEvent)

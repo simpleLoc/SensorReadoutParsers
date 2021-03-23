@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cinttypes>
 #include <string>
 #include <string_view>
@@ -43,7 +44,10 @@ namespace _internal {
 		}
 
 	public:
-		Tokenizer(const std::string& str) : str(str) {}
+		Tokenizer(const std::string_view str) : str(str) {}
+		~Tokenizer() noexcept(false) {
+			exceptAssert(ptr >= str.length(), "Remaining unparsed tokens. This is regarded as error.");
+		}
 
 		std::string_view next() {
 			std::string_view result;
@@ -62,7 +66,7 @@ namespace _internal {
 		}
 
 		void skipNext() {
-			exceptAssert(ptr <= str.length(), "Unexpected EOS");
+			exceptAssert(!isEOS(), "Unexpected EOS");
 			auto nextSepPtr = str.find(SEPERATOR, ptr);
 			if(nextSepPtr == std::string::npos) { // reached EOS, no further tokens
 				nextSepPtr = str.length();
@@ -71,6 +75,7 @@ namespace _internal {
 		}
 
 		std::string_view remainder() {
+			exceptAssert(!isEOS(), "Unexpected EOS");
 			std::string_view result = str.substr(ptr);
 			ptr = str.length() + 1;
 			return result;
@@ -86,10 +91,11 @@ namespace _internal {
 // ###########
 // # BaseTypes
 // ######################
-
 using Timestamp = uint64_t;
 using EventId = int32_t;
 using PedestrianActivityId = uint32_t;
+using UUID = std::array<char, 16>;
+
 ///
 /// \brief Primitive type used to represent the signal strength (RSSI) of an advertisement.
 ///
@@ -136,6 +142,12 @@ struct WifiAdvertisement {
 	WifiFrequency channelFreq;
 };
 
+struct DecawaveUWBMeasurement {
+	uint16_t nodeId;
+	float distance;
+	uint8_t qualityFactor;
+};
+
 
 // ###########
 // # EventTypes
@@ -161,6 +173,8 @@ static constexpr EventId EVENTID_HEART_RATE = 15;
 static constexpr EventId EVENTID_GPS = 16;
 static constexpr EventId EVENTID_WIFIRTT = 17;
 static constexpr EventId EVENTID_GAME_ROTATION_VECTOR = 18;
+static constexpr EventId EVENTID_EDDYSTONE_UID = 19;
+static constexpr EventId EVENTID_DECAWAVE_UWB = 20;
 // ------
 static constexpr EventId EVENTID_PEDESTRIAN_ACTIVITY = 50;
 static constexpr EventId EVENTID_GROUND_TRUTH = 99;
@@ -188,6 +202,8 @@ enum class EventType : EventId {
 	GPS = EVENTID_GPS,
 	WifiRTT = EVENTID_WIFIRTT,
 	GameRotationVector = EVENTID_GAME_ROTATION_VECTOR,
+	EddystoneUID = EVENTID_EDDYSTONE_UID,
+	DecawaveUWB = EVENTID_DECAWAVE_UWB,
 	// Special events
 	PedestrianActivity = EVENTID_PEDESTRIAN_ACTIVITY,
 	GroundTruth = EVENTID_GROUND_TRUTH,
@@ -305,6 +321,23 @@ struct WifiRTTEvent {
 	void parse(const std::string& parameterString);
 };
 struct GameRotationVectorEvent : public XYZSensorEventBase {};
+struct EddystoneUIDEvent {
+	MacAddress mac;
+	Rssi rssi;
+	BluetoothTxPower txPower;
+	UUID uid;
+
+	void parse(const std::string& parameterString);
+};
+struct DecawaveUWBEvent {
+	float x;
+	float y;
+	float z;
+	uint8_t qualityFactor;
+	std::vector<DecawaveUWBMeasurement> anchorMeasurements;
+
+	void parse(const std::string& parameterString);
+};
 
 
 // #### Special Events ####
@@ -334,8 +367,8 @@ struct FileMetadataEvent {
 
 
 using EventData = std::variant<AccelerometerEvent, GravityEvent, LinearAccelerationEvent, GyroscopeEvent, MagneticFieldEvent, PressureEvent,
-OrientationEvent, RotationMatrixEvent, WifiEvent, BLEEvent, RelativeHumidityEvent, OrientationOldEvent, RotationVectorEvent,
-LightEvent, AmbientTemperatureEvent, HeartRateEvent, GPSEvent, WifiRTTEvent, GameRotationVectorEvent,
+OrientationEvent, RotationMatrixEvent, WifiEvent, BLEEvent, RelativeHumidityEvent, OrientationOldEvent, RotationVectorEvent, LightEvent,
+AmbientTemperatureEvent, HeartRateEvent, GPSEvent, WifiRTTEvent, GameRotationVectorEvent, EddystoneUIDEvent, DecawaveUWBEvent,
 PedestrianActivityEvent, GroundTruthEvent, GroundTruthPathEvent, FileMetadataEvent>;
 
 struct SensorEvent {
