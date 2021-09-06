@@ -10,7 +10,8 @@ SCREEN_SIZE = [1920, 1080];
 
 sensorSelector = SensorSelector()...
 	.useSensor(SensorType.ACCELEROMETER)...
-	.useSensor(SensorType.GYROSCOPE);
+	.useSensor(SensorType.GYROSCOPE)...
+	.useSensor(SensorType.HEADING_CHANGE);
 
 % #########################################################################
 % # Select File

@@ -26,7 +26,8 @@ classdef SensorType
 						-1, ... % EDDISTONE_UUID
 						-1, ... % DECAWAVE_UWB
 						-1, ...	% STEP_DETECTOR
-						zeros(1, 29), ...
+						1, ...	% HEADING_CHANGE
+						zeros(1, 27), ...
 						1, ...	% PEDESTRIAN_ACTIVITY
 						zeros(1, 48), ...
 						1];		% GROUND_TRUTH
@@ -57,8 +58,9 @@ classdef SensorType
 		EDDISTONE_UUID = 19,
 		DECAWAVE_UWB = 20,
 		STEP_DETECTOR = 21,
+		HEADING_CHANGE = 22,
 		%%%%%%%%%%%%%%%%%%
-		SENSOR_END = 21, % last sensor-id
+		SENSOR_END = 22, % last sensor-id
 		
 		
 		PEDESTRIAN_ACTIVITY = 50,

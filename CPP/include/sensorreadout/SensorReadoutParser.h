@@ -214,6 +214,7 @@ static constexpr EventId EVENTID_GAME_ROTATION_VECTOR = 18;
 static constexpr EventId EVENTID_EDDYSTONE_UID = 19;
 static constexpr EventId EVENTID_DECAWAVE_UWB = 20;
 static constexpr EventId EVENTID_STEP_DETECTOR = 21;
+static constexpr EventId EVENTID_HEADING_CHANGE = 22;
 // ------
 static constexpr EventId EVENTID_PEDESTRIAN_ACTIVITY = 50;
 static constexpr EventId EVENTID_GROUND_TRUTH = 99;
@@ -244,6 +245,7 @@ enum class EventType : EventId {
 	EddystoneUID = EVENTID_EDDYSTONE_UID,
 	DecawaveUWB = EVENTID_DECAWAVE_UWB,
 	StepDetector = EVENTID_STEP_DETECTOR,
+	HeadingChange = EVENTID_HEADING_CHANGE,
 	// Special events
 	PedestrianActivity = EVENTID_PEDESTRIAN_ACTIVITY,
 	GroundTruth = EVENTID_GROUND_TRUTH,
@@ -268,9 +270,9 @@ enum class PedestrianActivity : PedestrianActivityId {
 // # ParsedModels (bases)
 // ######################
 
-template<const size_t ARG_CNT = 1>
+template<const size_t ARG_CNT = 1, typename TNumericValue = float>
 struct NumericSensorEventBase {
-	using NumericValue = float;
+	using NumericValue = TNumericValue;
 
 	//static_assert (sizeof(Self) == (sizeof(NumericValue) * ARG_CNT), "Struct size and argument count do not match.");
 
@@ -381,6 +383,9 @@ struct DecawaveUWBEvent {
 struct StepDetectorEvent : public NumericSensorEventBase<1> {
 	float probability;
 };
+struct HeadingChangeEvent : public NumericSensorEventBase<1, double> {
+	double headingChangeRad;
+};
 
 
 // #### Special Events ####
@@ -412,7 +417,7 @@ struct FileMetadataEvent {
 using EventData = std::variant<AccelerometerEvent, GravityEvent, LinearAccelerationEvent, GyroscopeEvent, MagneticFieldEvent, PressureEvent,
 OrientationEvent, RotationMatrixEvent, WifiEvent, BLEEvent, RelativeHumidityEvent, OrientationOldEvent, RotationVectorEvent, LightEvent,
 AmbientTemperatureEvent, HeartRateEvent, GPSEvent, WifiRTTEvent, GameRotationVectorEvent, EddystoneUIDEvent, DecawaveUWBEvent, StepDetectorEvent,
-PedestrianActivityEvent, GroundTruthEvent, GroundTruthPathEvent, FileMetadataEvent>;
+HeadingChangeEvent, PedestrianActivityEvent, GroundTruthEvent, GroundTruthPathEvent, FileMetadataEvent>;
 
 struct SensorEvent {
 

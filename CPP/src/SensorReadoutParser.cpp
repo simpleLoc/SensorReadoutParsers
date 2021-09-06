@@ -227,6 +227,7 @@ SensorEvent SensorEvent::parse(const RawSensorEvent &rawEvent) {
 		SENSOR_EVENT_PARSE_CASE(EventType::EddystoneUID, EddystoneUIDEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::DecawaveUWB, DecawaveUWBEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::StepDetector, StepDetectorEvent)
+		SENSOR_EVENT_PARSE_CASE(EventType::HeadingChange, HeadingChangeEvent)
 		// Special events
 		SENSOR_EVENT_PARSE_CASE(EventType::PedestrianActivity, PedestrianActivityEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::GroundTruth, GroundTruthEvent)
