@@ -24,6 +24,7 @@ fileName = [cutFilePath, cutFile];
 % #########################################################################
 parser = SensorReadoutParser(fileName, true);
 timestampedSensorData = parser.parseSensorData();
+stepEvents = parser.parseEventSensors();
 recording = timestampedSensorData.resampleIntoDataContainer(SAMPLE_INTERVAL);
 
 % #########################################################################

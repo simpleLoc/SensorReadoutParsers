@@ -13,88 +13,21 @@
 namespace SensorReadoutParser {
 
 // ###########
-// # Helpers
-// ######################
-
-namespace _internal {
-	#define exceptAssert(cond, exceptionStr) if(!(cond)) { throw std::runtime_error(exceptionStr); }
-	#define exceptWhen(cond, exceptionStr) if((cond)) { throw std::runtime_error(exceptionStr); }
-
-	template<typename TValue>
-	TValue fromStringView(const std::string_view& str, const char* format) {
-		TValue result;
-		exceptAssert(sscanf(str.data(), format, &result) == 1, "Failed to parse token to value");
-		return result;
-	}
-	template<typename TValue> TValue fromStringView(const std::string_view& str) { return TValue::unimplemented_function(); }
-
-	template<const char SEPERATOR>
-	class Tokenizer {
-	private:
-		std::string_view str;
-		size_t ptr = 0;
-
-	private:
-		template<typename TValue>
-		TValue nextAs(const char* format) {
-			std::string_view token = next();
-			TValue result;
-			exceptAssert(sscanf(token.data(), format, &result) == 1, "Failed to parse token to value");
-			return result;
-		}
-
-	public:
-		Tokenizer(const std::string_view str) : str(str) {}
-		~Tokenizer() noexcept(false) {
-			exceptAssert(ptr >= str.length(), "Remaining unparsed tokens. This is regarded as error.");
-		}
-
-		std::string_view next() {
-			std::string_view result;
-			exceptAssert(!isEOS(), "Unexpected EOS");
-			auto nextSepPtr = str.find(SEPERATOR, ptr);
-			if(nextSepPtr == std::string::npos) { // reached EOS, no further tokens
-				nextSepPtr = str.length();
-			}
-			result = str.substr(ptr, (nextSepPtr - ptr));
-			ptr = nextSepPtr + 1;
-			return result;
-		}
-
-		template<typename TValue> TValue nextAs() {
-			return fromStringView<TValue>(next());
-		}
-
-		void skipNext() {
-			exceptAssert(!isEOS(), "Unexpected EOS");
-			auto nextSepPtr = str.find(SEPERATOR, ptr);
-			if(nextSepPtr == std::string::npos) { // reached EOS, no further tokens
-				nextSepPtr = str.length();
-			}
-			ptr = nextSepPtr + 1;
-		}
-
-		std::string_view remainder() {
-			exceptAssert(!isEOS(), "Unexpected EOS");
-			std::string_view result = str.substr(ptr);
-			ptr = str.length() + 1;
-			return result;
-		}
-
-		bool isEOS() const {
-			return ptr > str.length();
-		}
-	};
-
-}
-
-// ###########
 // # BaseTypes
 // ######################
 using Timestamp = uint64_t;
 using EventId = int32_t;
 using PedestrianActivityId = uint32_t;
-using UUID = std::array<char, 16>;
+
+struct UUID {
+	static constexpr size_t UUID_LENGTH = 16;
+	static constexpr size_t STRING_LENGTH = 16*2 + 4;
+
+	std::array<uint8_t, UUID_LENGTH> data;
+
+	static UUID fromString(const std::string_view& uuidStr);
+	std::string toString() const;
+};
 
 ///
 /// \brief Primitive type used to represent the signal strength (RSSI) of an advertisement.
@@ -149,6 +82,111 @@ struct DecawaveUWBMeasurement {
 };
 
 
+
+// ###########
+// # Helpers
+// ######################
+
+namespace _internal {
+	#define exceptUnreachable(exceptionStr) throw std::runtime_error(exceptionStr);
+	#define exceptAssert(cond, exceptionStr) if(!(cond)) { throw std::runtime_error(exceptionStr); }
+	#define exceptWhen(cond, exceptionStr) if((cond)) { throw std::runtime_error(exceptionStr); }
+
+	template<typename TValue>
+	TValue fromStringView(const std::string_view& str, const char* format) {
+		TValue result;
+		//FIXME: This is broken! string_views are not necessarily zero-terminated, since they are
+		// a section from somewhere mid in a string. There is no s<n>scanf variant that takes a max length
+		// unfortunately. And std::istringstream is not constructible on string_views...
+		exceptAssert(sscanf(str.data(), format, &result) == 1, "Failed to parse token to value");
+		return result;
+	}
+	template<typename TValue> TValue fromStringView([[maybe_unused]] const std::string_view& str) { return TValue::unimplemented_function(); }
+
+	#define IMPLEMENT_FROM_STRINGVIEW_NUMERIC(numberType, sscanfParameter) \
+		template<> numberType fromStringView<numberType>(const std::string_view& str) { return fromStringView<numberType>(str, "%" sscanfParameter); }
+
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint8_t, SCNu8);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int8_t, SCNd8);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint16_t, SCNu16);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int16_t, SCNd16);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint32_t, SCNu32);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int32_t, SCNd32);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint64_t, SCNu64);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int64_t, SCNd64);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(float, "f");
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(double, "lf");
+
+	template<> UUID fromStringView<UUID>(const std::string_view& str) {
+		return UUID::fromString(str);
+	}
+	template<> MacAddress fromStringView<MacAddress>(const std::string_view& str) {
+		if(str.length() == MacAddress::STRING_LENGTH_SHORT) {
+			return MacAddress::fromString(str);
+		} else {
+			return MacAddress::fromColonDelimitedString(str);
+		}
+	}
+
+
+
+	template<const char SEPERATOR>
+	class Tokenizer {
+	private:
+		std::string_view str;
+		size_t ptr = 0;
+
+	public:
+		Tokenizer(const std::string_view str) : str(str) {}
+		~Tokenizer() noexcept(false) {
+			exceptAssert(ptr >= str.length(), "Remaining unparsed tokens. This is regarded as error.");
+		}
+
+		std::string_view next() {
+			std::string_view result;
+			exceptAssert(!isEOS(), "Unexpected EOS");
+			auto nextSepPtr = str.find(SEPERATOR, ptr);
+			if(nextSepPtr == std::string::npos) { // reached EOS, no further tokens
+				nextSepPtr = str.length();
+			}
+			result = str.substr(ptr, (nextSepPtr - ptr));
+			ptr = nextSepPtr + 1;
+			return result;
+		}
+
+		template<typename TValue> TValue nextAs() {
+			try {
+				return fromStringView<TValue>(next());
+			} catch (std::runtime_error& e) {
+				ptr = str.length();
+				throw e;
+			}
+		}
+
+		void skipNext() {
+			exceptAssert(!isEOS(), "Unexpected EOS");
+			auto nextSepPtr = str.find(SEPERATOR, ptr);
+			if(nextSepPtr == std::string::npos) { // reached EOS, no further tokens
+				nextSepPtr = str.length();
+			}
+			ptr = nextSepPtr + 1;
+		}
+
+		std::string_view remainder() {
+			exceptAssert(!isEOS(), "Unexpected EOS");
+			std::string_view result = str.substr(ptr);
+			ptr = str.length() + 1;
+			return result;
+		}
+
+		bool isEOS() const {
+			return ptr > str.length();
+		}
+	};
+
+}
+
+
 // ###########
 // # EventTypes
 // ######################
@@ -175,6 +213,7 @@ static constexpr EventId EVENTID_WIFIRTT = 17;
 static constexpr EventId EVENTID_GAME_ROTATION_VECTOR = 18;
 static constexpr EventId EVENTID_EDDYSTONE_UID = 19;
 static constexpr EventId EVENTID_DECAWAVE_UWB = 20;
+static constexpr EventId EVENTID_STEP_DETECTOR = 21;
 // ------
 static constexpr EventId EVENTID_PEDESTRIAN_ACTIVITY = 50;
 static constexpr EventId EVENTID_GROUND_TRUTH = 99;
@@ -204,6 +243,7 @@ enum class EventType : EventId {
 	GameRotationVector = EVENTID_GAME_ROTATION_VECTOR,
 	EddystoneUID = EVENTID_EDDYSTONE_UID,
 	DecawaveUWB = EVENTID_DECAWAVE_UWB,
+	StepDetector = EVENTID_STEP_DETECTOR,
 	// Special events
 	PedestrianActivity = EVENTID_PEDESTRIAN_ACTIVITY,
 	GroundTruth = EVENTID_GROUND_TRUTH,
@@ -338,6 +378,9 @@ struct DecawaveUWBEvent {
 
 	void parse(const std::string& parameterString);
 };
+struct StepDetectorEvent : public NumericSensorEventBase<1> {
+	float probability;
+};
 
 
 // #### Special Events ####
@@ -368,7 +411,7 @@ struct FileMetadataEvent {
 
 using EventData = std::variant<AccelerometerEvent, GravityEvent, LinearAccelerationEvent, GyroscopeEvent, MagneticFieldEvent, PressureEvent,
 OrientationEvent, RotationMatrixEvent, WifiEvent, BLEEvent, RelativeHumidityEvent, OrientationOldEvent, RotationVectorEvent, LightEvent,
-AmbientTemperatureEvent, HeartRateEvent, GPSEvent, WifiRTTEvent, GameRotationVectorEvent, EddystoneUIDEvent, DecawaveUWBEvent,
+AmbientTemperatureEvent, HeartRateEvent, GPSEvent, WifiRTTEvent, GameRotationVectorEvent, EddystoneUIDEvent, DecawaveUWBEvent, StepDetectorEvent,
 PedestrianActivityEvent, GroundTruthEvent, GroundTruthPathEvent, FileMetadataEvent>;
 
 struct SensorEvent {

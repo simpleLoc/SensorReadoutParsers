@@ -3,7 +3,10 @@ enable_testing()
 # use boost test framework
 find_package(Boost COMPONENTS unit_test_framework REQUIRED)
 
-add_executable(ParserTest "ParserTest.cpp")
+file(GLOB_RECURSE TEST_FILES "testFiles/*.csv")
+source_group("testFiles" FILES ${TEST_FILES})
+
+add_executable(ParserTest "ParserTest.cpp" ${TEST_FILES})
 add_test(NAME ParserTest COMMAND ParserTest)
 target_link_libraries(ParserTest SensorReadoutParser ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 

@@ -6,33 +6,48 @@ namespace SensorReadoutParser {
 
 using namespace _internal;
 
-namespace _internal {
-	#define IMPLEMENT_FROM_STRINGVIEW_NUMERIC(numberType, sscanfParameter) \
-		template<> numberType fromStringView<numberType>(const std::string_view& str) { return fromStringView<numberType>(str, "%" sscanfParameter); }
-
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint8_t, SCNu8);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int8_t, SCNd8);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint16_t, SCNu16);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int16_t, SCNd16);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint32_t, SCNu32);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int32_t, SCNd32);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint64_t, SCNu64);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int64_t, SCNd64);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(float, "f");
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(double, "lf");
-
-	template<> UUID fromStringView<UUID>(const std::string_view& str) {
-		UUID uuid;
-		exceptAssert(sscanf(str.data(), "%16s", &uuid[0]) == 1, "Failed to parse uuid to value");
-		return uuid;
-	}
-}
-
 // ###########
 // # BaseTypes
 // ######################
+static uint8_t parseHexNibble(char hex) {
+	if(hex >= '0' && hex <= '9') {
+		return hex - '0';
+	} else if(hex >= 'A' && hex <= 'F') {
+		return hex - 'A' + 10;
+	} else if(hex >= 'a' || hex <= 'f') {
+		return hex - 'a' + 10;
+	}
+	exceptUnreachable("Invalid hex encountered");
+}
 
-MacAddress MacAddress::fromString(const std::string_view &macStr) {
+UUID UUID::fromString(const std::string_view& uuidStr) {
+	exceptAssert(uuidStr.size() == STRING_LENGTH, "Attempted to parse invalid UUID string");
+	UUID result;
+	for(size_t bPtr = 0, cPtr = 0; cPtr < STRING_LENGTH;) {
+		if(uuidStr[cPtr] != '-') {
+			result.data[bPtr] = (parseHexNibble(uuidStr[cPtr]) << 4) | parseHexNibble(uuidStr[cPtr + 1]);
+			cPtr += 2;
+			bPtr += 1;
+		} else {
+			cPtr += 1;
+		}
+	}
+	return result;
+}
+
+std::string UUID::toString() const {
+	static const char* charMap = "0123456789abcdef";
+	std::string result(STRING_LENGTH, '-');
+#define PRINT_UUID_BYTE(i,o) result[(i)*2 + o] = charMap[data[(i)] >> 4]; result[(i)*2 + 1 + o] = charMap[data[(i)] & 0xF]
+	for(auto i = 0; i < 4; ++i) { PRINT_UUID_BYTE(i, 0); }
+	PRINT_UUID_BYTE(4, 1); PRINT_UUID_BYTE(5, 1);
+	PRINT_UUID_BYTE(6, 2); PRINT_UUID_BYTE(7, 2);
+	PRINT_UUID_BYTE(8, 3); PRINT_UUID_BYTE(9, 3);
+	for(auto i = 0; i < 6; ++i) { PRINT_UUID_BYTE(10 + i, 4); }
+	return result;
+}
+
+MacAddress MacAddress::fromString(const std::string_view& macStr) {
 	exceptAssert(macStr.size() == STRING_LENGTH_SHORT, "Undelimited MAC-Address string has to have correct length");
 	MacAddress res;
 	exceptAssert(
@@ -42,7 +57,7 @@ MacAddress MacAddress::fromString(const std::string_view &macStr) {
 	return res;
 }
 
-MacAddress MacAddress::fromColonDelimitedString(const std::string_view &delimitedMacStr) {
+MacAddress MacAddress::fromColonDelimitedString(const std::string_view& delimitedMacStr) {
 	exceptAssert(delimitedMacStr.size() == STRING_LENGTH_COLONDELIMITED, "Delimited MAC-Address string has to have correct length");
 	MacAddress res;
 	exceptAssert(
@@ -86,7 +101,7 @@ void WifiEvent::parse(const std::string& parameterString) {
 
 	try {
 		while(!tokenizer.isEOS()) {
-			advertisement.mac = MacAddress::fromString(tokenizer.next());
+			advertisement.mac = tokenizer.nextAs<MacAddress>();
 			advertisement.channelFreq = tokenizer.nextAs<WifiFrequency>();
 			advertisement.rssi = tokenizer.nextAs<Rssi>();
 
@@ -98,11 +113,10 @@ void WifiEvent::parse(const std::string& parameterString) {
 }
 
 void BLEEvent::parse(const std::string& parameterString) {
-	exceptAssert(parameterString.size() > 14, "Bluetooth event does not seem to have all required fields");
-	// Parse undelimited mac address
-	std::string_view macView = std::string_view(parameterString).substr(0, 12);
-	mac = MacAddress::fromString(macView);
-	exceptAssert(sscanf(&parameterString[12], ";%d;%d", &rssi, &txPower) == 2, "Parsing Bluetooth advertisement event failed");
+	Tokenizer<';'> tokenizer(parameterString);
+	mac = tokenizer.nextAs<MacAddress>();
+	rssi = tokenizer.nextAs<Rssi>();
+	txPower = tokenizer.nextAs<BluetoothTxPower>();
 }
 
 void GPSEvent::parse(const std::string& parameterString) {
@@ -117,11 +131,8 @@ void WifiRTTEvent::parse(const std::string& parameterString) {
 
 void EddystoneUIDEvent::parse(const std::string& parameterString) {
 	exceptAssert(parameterString.size() > 32, "EddystoneUID event does not seem to have all required fields");
-	// Parse undelimited mac address
-	std::string_view macView = std::string_view(parameterString).substr(0, 12);
-	mac = MacAddress::fromString(macView);
-
-	Tokenizer<';'> tokenizer(std::string_view(parameterString).substr(13));
+	Tokenizer<';'> tokenizer(parameterString);
+	mac = tokenizer.nextAs<MacAddress>();
 	rssi = tokenizer.nextAs<Rssi>();
 	txPower = tokenizer.nextAs<BluetoothTxPower>();
 	uid = tokenizer.nextAs<UUID>();
@@ -215,6 +226,7 @@ SensorEvent SensorEvent::parse(const RawSensorEvent &rawEvent) {
 		SENSOR_EVENT_PARSE_CASE(EventType::GameRotationVector, GameRotationVectorEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::EddystoneUID, EddystoneUIDEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::DecawaveUWB, DecawaveUWBEvent)
+		SENSOR_EVENT_PARSE_CASE(EventType::StepDetector, StepDetectorEvent)
 		// Special events
 		SENSOR_EVENT_PARSE_CASE(EventType::PedestrianActivity, PedestrianActivityEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::GroundTruth, GroundTruthEvent)

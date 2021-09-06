@@ -111,6 +111,22 @@ classdef SensorReadoutParser < handle
 			end
 		end
 		
+		function [stepEvts] = parseEventSensors(self)
+			% PARSEEVENTSENSORS Parse event-based sensors such as the StepDetector
+			self.ensureLoaded();
+			
+			stepIdxs = (self.evtIds == SensorType.STEP_DETECTOR);
+			rawStepData = self.rawInputData{3}(stepIdxs);
+			
+			% allocate result structures and populate timestamps
+			stepEvts = cell(rows(rawStepData), 2);
+			stepEvts(:,1) = num2cell(self.timestamps(stepIdxs));
+			
+			% parse StepDetector
+			rawStepData = textscan(strjoin(rawStepData, '\n'), '%f');
+			stepEvts(:, 2) = num2cell(rawStepData{1});
+		end
+		
 		function [btAdvertisements, wifiAdvertisements, uwbMeasurements] = parseRadio(self)
 			% PARSERADIO Parse radio-specific data from the recording (bluetooth & wifi advertisements)
 			self.ensureLoaded();

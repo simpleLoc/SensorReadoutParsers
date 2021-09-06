@@ -25,6 +25,7 @@ classdef SensorType
 						3,	...	% GAME_ROTATION_VECTOR
 						-1, ... % EDDISTONE_UUID
 						-1, ... % DECAWAVE_UWB
+						-1, ...	% STEP_DETECTOR
 						zeros(1, 29), ...
 						1, ...	% PEDESTRIAN_ACTIVITY
 						zeros(1, 48), ...
@@ -55,8 +56,9 @@ classdef SensorType
 		GAME_ROTATION_VECTOR = 18,
 		EDDISTONE_UUID = 19,
 		DECAWAVE_UWB = 20,
+		STEP_DETECTOR = 21,
 		%%%%%%%%%%%%%%%%%%
-		SENSOR_END = 20, % last sensor-id
+		SENSOR_END = 21, % last sensor-id
 		
 		
 		PEDESTRIAN_ACTIVITY = 50,
@@ -73,6 +75,10 @@ classdef SensorType
 				value = find(SensorType.argCntLookup > 0) - 3;
 			end
 			result = value;
+		end
+		
+		function result = EVENT_SENSOR_LIST()
+			result = [SensorType.STEP_DETECTOR];
 		end
 	end
 	
