@@ -7,6 +7,37 @@ namespace SensorReadoutParser {
 using namespace _internal;
 
 // ###########
+// # Helpers
+// ######################
+namespace _internal {
+	#define IMPLEMENT_FROM_STRINGVIEW_NUMERIC(numberType, sscanfParameter) \
+		template<> numberType fromStringView<numberType>(const std::string_view& str) { return fromStringView<numberType>(str, "%" sscanfParameter); }
+
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint8_t, SCNu8);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int8_t, SCNd8);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint16_t, SCNu16);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int16_t, SCNd16);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint32_t, SCNu32);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int32_t, SCNd32);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint64_t, SCNu64);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int64_t, SCNd64);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(float, "f");
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(double, "lf");
+
+	template<> UUID fromStringView<UUID>(const std::string_view& str) {
+		return UUID::fromString(str);
+	}
+	template<> MacAddress fromStringView<MacAddress>(const std::string_view& str) {
+		if(str.length() == MacAddress::STRING_LENGTH_SHORT) {
+			return MacAddress::fromString(str);
+		} else {
+			return MacAddress::fromColonDelimitedString(str);
+		}
+	}
+}
+
+
+// ###########
 // # BaseTypes
 // ######################
 static uint8_t parseHexNibble(char hex) {

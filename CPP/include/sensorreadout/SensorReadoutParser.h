@@ -101,33 +101,21 @@ namespace _internal {
 		exceptAssert(sscanf(str.data(), format, &result) == 1, "Failed to parse token to value");
 		return result;
 	}
+
 	template<typename TValue> TValue fromStringView([[maybe_unused]] const std::string_view& str) { return TValue::unimplemented_function(); }
-
-	#define IMPLEMENT_FROM_STRINGVIEW_NUMERIC(numberType, sscanfParameter) \
-		template<> numberType fromStringView<numberType>(const std::string_view& str) { return fromStringView<numberType>(str, "%" sscanfParameter); }
-
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint8_t, SCNu8);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int8_t, SCNd8);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint16_t, SCNu16);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int16_t, SCNd16);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint32_t, SCNu32);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int32_t, SCNd32);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint64_t, SCNu64);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int64_t, SCNd64);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(float, "f");
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(double, "lf");
-
-	template<> UUID fromStringView<UUID>(const std::string_view& str) {
-		return UUID::fromString(str);
-	}
-	template<> MacAddress fromStringView<MacAddress>(const std::string_view& str) {
-		if(str.length() == MacAddress::STRING_LENGTH_SHORT) {
-			return MacAddress::fromString(str);
-		} else {
-			return MacAddress::fromColonDelimitedString(str);
-		}
-	}
-
+	// declarations of fromStringView implementations/specializations
+	template<> uint8_t fromStringView(const std::string_view&);
+	template<> int8_t fromStringView(const std::string_view&);
+	template<> uint16_t fromStringView(const std::string_view&);
+	template<> int16_t fromStringView(const std::string_view&);
+	template<> uint32_t fromStringView(const std::string_view&);
+	template<> int32_t fromStringView(const std::string_view&);
+	template<> uint64_t fromStringView(const std::string_view&);
+	template<> int64_t fromStringView(const std::string_view&);
+	template<> float fromStringView(const std::string_view&);
+	template<> double fromStringView(const std::string_view&);
+	template<> UUID fromStringView(const std::string_view&);
+	template<> MacAddress fromStringView(const std::string_view&);
 
 
 	template<const char SEPERATOR>
