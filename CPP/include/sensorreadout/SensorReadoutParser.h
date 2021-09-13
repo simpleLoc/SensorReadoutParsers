@@ -118,7 +118,12 @@ namespace _internal {
 		size_t ptr = 0;
 
 	public:
-		Tokenizer(const std::string_view str) : str(str) {}
+		/**
+		 * @brief Tokenizer ctor
+		 * @param str String to construct the Tokenizer on
+		 * @details If the passed str is empty, this Tokenizer will go straight to being EOF
+		 */
+		Tokenizer(const std::string_view str) : str(str), ptr((str.length() == 0) ? 1 : 0) {}
 		~Tokenizer() noexcept(false) {
 			exceptAssert(ptr >= str.length(), "Remaining unparsed tokens. This is regarded as error.");
 		}
