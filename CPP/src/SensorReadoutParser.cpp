@@ -10,20 +10,29 @@ using namespace _internal;
 // # Helpers
 // ######################
 namespace _internal {
-	#define IMPLEMENT_FROM_STRINGVIEW_NUMERIC(numberType, sscanfParameter) \
-		template<> numberType fromStringView<numberType>(const std::string_view& str) { return fromStringView<numberType>(str, "%" sscanfParameter); }
+	#define IMPLEMENT_FROM_STRINGVIEW_NUMERIC(NumberType) \
+		template<> NumberType fromStringView(const std::string_view& str) { \
+			NumberType result; \
+			auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.size(), result); \
+			exceptAssert(ec == std::errc(), "Failed to parse token to value"); \
+			return result; \
+		}
 
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint8_t, SCNu8);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int8_t, SCNd8);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint16_t, SCNu16);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int16_t, SCNd16);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint32_t, SCNu32);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int32_t, SCNd32);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint64_t, SCNu64);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int64_t, SCNd64);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(float, "f");
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(double, "lf");
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint8_t);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int8_t);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint16_t);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int16_t);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint32_t);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int32_t);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint64_t);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int64_t);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(float);
+	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(double);
 
+	template<> bool fromStringView<bool>(const std::string_view& str) {
+		uint8_t data = fromStringView<uint8_t>(str);
+		return (data != 0);
+	}
 	template<> UUID fromStringView<UUID>(const std::string_view& str) {
 		return UUID::fromString(str);
 	}
@@ -108,6 +117,14 @@ uint8_t& MacAddress::operator[](size_t idx) {
 
 std::string MacAddress::toString() const {
 	std::string macString;
+	macString.resize(STRING_LENGTH_SHORT);
+	for(size_t i = 0; i < MAC_LENGTH; ++i) {
+		sprintf(&macString[i * 2], "%02X", mac[i]);
+	}
+	return macString;
+}
+std::string MacAddress::toColonDelimitedString() const {
+	std::string macString;
 	macString.resize(STRING_LENGTH_COLONDELIMITED);
 	for(size_t i = 0; i < MAC_LENGTH; ++i) {
 		sprintf(&macString[i * 3], "%02X:", mac[i]);
@@ -142,6 +159,13 @@ void WifiEvent::parse(const std::string& parameterString) {
 		throw std::runtime_error(e.what());
 	}
 }
+void WifiEvent::serializeInto(_internal::ParameterAssembler& stream) const {
+	for(const auto& adv : advertisements) {
+		stream.push(adv.mac.toString());
+		stream.push(adv.channelFreq);
+		stream.push(adv.rssi);
+	}
+}
 
 void BLEEvent::parse(const std::string& parameterString) {
 	Tokenizer<';'> tokenizer(parameterString);
@@ -149,15 +173,30 @@ void BLEEvent::parse(const std::string& parameterString) {
 	rssi = tokenizer.nextAs<Rssi>();
 	txPower = tokenizer.nextAs<BluetoothTxPower>();
 }
-
-void GPSEvent::parse(const std::string& parameterString) {
-	exceptWhen(true, "Not implemented yet.");
-	//TODO: IMPLEMENT
+void BLEEvent::serializeInto(_internal::ParameterAssembler& stream) const {
+	stream.push(mac.toString());
+	stream.push(rssi);
+	stream.push(txPower);
 }
 
 void WifiRTTEvent::parse(const std::string& parameterString) {
-	exceptWhen(true, "Not implemented yet.");
-	//TODO: IMPLEMENT
+	Tokenizer<';'> tokenizer(parameterString);
+	success = tokenizer.nextAs<bool>();
+	mac = tokenizer.nextAs<MacAddress>();
+	distance = tokenizer.nextAs<float>();
+	distanceStdDev = tokenizer.nextAs<float>();
+	rssi = tokenizer.nextAs<Rssi>();
+	numAttempted = tokenizer.nextAs<size_t>();
+	numSuccessfull = tokenizer.nextAs<size_t>();
+}
+void WifiRTTEvent::serializeInto(_internal::ParameterAssembler& stream) const {
+	stream.push(success);
+	stream.push(mac.toString());
+	stream.push(distance);
+	stream.push(distanceStdDev);
+	stream.push(rssi);
+	stream.push(numAttempted);
+	stream.push(numSuccessfull);
 }
 
 void EddystoneUIDEvent::parse(const std::string& parameterString) {
@@ -167,6 +206,12 @@ void EddystoneUIDEvent::parse(const std::string& parameterString) {
 	rssi = tokenizer.nextAs<Rssi>();
 	txPower = tokenizer.nextAs<BluetoothTxPower>();
 	uid = tokenizer.nextAs<UUID>();
+}
+void EddystoneUIDEvent::serializeInto(_internal::ParameterAssembler& stream) const {
+	stream.push(mac.toString());
+	stream.push(rssi);
+	stream.push(txPower);
+	stream.push(uid.toString());
 }
 
 void DecawaveUWBEvent::parse(const std::string& parameterString) {
@@ -190,29 +235,25 @@ void DecawaveUWBEvent::parse(const std::string& parameterString) {
 		throw std::runtime_error(e.what());
 	}
 }
+void DecawaveUWBEvent::serializeInto(_internal::ParameterAssembler& stream) const {
+	stream.push(x);
+	stream.push(y);
+	stream.push(z);
+	stream.push(qualityFactor);
+	for(const auto& anchorMeasurement : anchorMeasurements) {
+		stream.push(anchorMeasurement.nodeId);
+		stream.push(anchorMeasurement.distance);
+		stream.push(anchorMeasurement.qualityFactor);
+	}
+}
 
 void PedestrianActivityEvent::parse(const std::string& parameterString) {
 	Tokenizer<';'> tokenizer(parameterString);
 	tokenizer.skipNext(); // skip activity name
 	activity = static_cast<PedestrianActivity>(tokenizer.nextAs<PedestrianActivityId>());
 }
-
-void GroundTruthEvent::parse(const std::string& parameterString) {
-	try {
-		groundTruthId = std::stoul(parameterString);
-	} catch(...) {
-		exceptWhen(true, "Invalid ground truth id.");
-	}
-}
-
-void GroundTruthPathEvent::parse(const std::string& parameterString) {
-	try {
-		Tokenizer<';'> tokenizer(parameterString);
-		pathId = tokenizer.nextAs<size_t>();
-		groundTruthPointCnt = tokenizer.nextAs<size_t>();
-	} catch(...) {
-		exceptWhen(true, "Invalid ground truth id.");
-	}
+void PedestrianActivityEvent::serializeInto(_internal::ParameterAssembler& stream) const {
+	stream.push(static_cast<PedestrianActivityId>(activity));
 }
 
 void FileMetadataEvent::parse(const std::string& parameterString) {
@@ -222,15 +263,20 @@ void FileMetadataEvent::parse(const std::string& parameterString) {
 	comment = tokenizer.remainder();
 	exceptAssert(date.length() > 0, "FileMetadata date is empty.");
 }
+void FileMetadataEvent::serializeInto(_internal::ParameterAssembler& stream) const {
+	stream.push(date);
+	stream.push(person);
+	stream.push(comment);
+}
 
 SensorEvent SensorEvent::parse(const RawSensorEvent& rawEvent) {
-#define SENSOR_EVENT_PARSE_CASE(EvtType, EvtStruct) \
-	case EvtType: { \
-	EvtStruct evt; \
-	evt.parse(rawEvent.parameterString); \
-	result.data = evt; \
-	break; \
-}
+	#define SENSOR_EVENT_PARSE_CASE(EvtType, EvtStruct) \
+		case EvtType: { \
+			EvtStruct evt; \
+			evt.parse(rawEvent.parameterString); \
+			result.data = evt; \
+			break; \
+		}
 
 	SensorEvent result;
 	result.timestamp = rawEvent.timestamp;
@@ -269,6 +315,49 @@ SensorEvent SensorEvent::parse(const RawSensorEvent& rawEvent) {
 		}
 	}
 	return result;
+}
+
+void SensorEvent::serializeInto(RawSensorEvent& rawEvent) const {
+	#define SENSOR_EVENT_SERIALIZE_INTO_CASE(EvtType, EvtStruct) \
+		case EvtType: { \
+			std::get<EvtStruct>(data).serializeInto(parameterStream); \
+			break; \
+		}
+
+	rawEvent.eventId = static_cast<EventId>(eventType);
+	rawEvent.timestamp = timestamp;
+	_internal::ParameterAssembler parameterStream;
+	switch(eventType) {
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::Accelerometer, AccelerometerEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::Gravity, GravityEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::LinearAcceleration, LinearAccelerationEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::Gyroscope, GyroscopeEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::MagneticField, MagneticFieldEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::Pressure, PressureEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::Orientation, OrientationEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::RotationMatrix, RotationMatrixEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::Wifi, WifiEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::BLE, BLEEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::RelativeHumidity, RelativeHumidityEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::OrientationOld, OrientationOldEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::RotationVector, RotationVectorEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::Light, LightEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::AmbientTemperature, AmbientTemperatureEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::HeartRate, HeartRateEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::GPS, GPSEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::WifiRTT, WifiRTTEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::GameRotationVector, GameRotationVectorEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::EddystoneUID, EddystoneUIDEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::DecawaveUWB, DecawaveUWBEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::StepDetector, StepDetectorEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::HeadingChange, HeadingChangeEvent)
+		// Special events
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::PedestrianActivity, PedestrianActivityEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::GroundTruth, GroundTruthEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::GroundTruthPath, GroundTruthPathEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::FileMetadata, FileMetadataEvent)
+	}
+	rawEvent.parameterString = parameterStream.str();
 }
 
 
@@ -346,6 +435,12 @@ void Serializer::write(const RawSensorEvent& sensorEvent) {
 	stream << sensorEvent.eventId << ";";
 	stream << sensorEvent.parameterString << std::endl;
 	exceptAssert(stream.good(), "I/O error");
+}
+
+void Serializer::write(const SensorEvent& sensorEvent) {
+	RawSensorEvent rawEvt;
+	sensorEvent.serializeInto(rawEvt);
+	write(rawEvt);
 }
 
 }

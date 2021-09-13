@@ -16,16 +16,16 @@ using namespace _internal;
 // # Serializer
 // ######################
 
-void parseSerializeEqualityFile(const std::string& filePath) {
+void parseRawSerializeEqualityFile(const std::string& filePath) {
 	std::fstream inputFile(filePath);
 	BOOST_REQUIRE(inputFile.is_open());
-	std::string outputFileName = filePath + "_out";
+	std::string outputFileName = filePath + "_outRaw";
 	std::filesystem::remove(outputFileName);
 	std::fstream outputFile;
 	outputFile.open(outputFileName, std::ios::out);
 	BOOST_REQUIRE(outputFile.is_open());
 
-	{ // parse and serialize back
+	{ // parse raw and serialize back
 		VisitingParser parser(inputFile);
 		Serializer serializer(outputFile);
 
@@ -51,7 +51,52 @@ void parseSerializeEqualityFile(const std::string& filePath) {
 	}
 }
 
+void parseSerializeEqualityFile(const std::string& filePath) {
+	// This function parses the file, parses the raw events into typed events
+	// serializes the typed events out into the "[...]_out" file.
+
+	// This file is then parsed, the events are parsed into typed events
+	// and the output of <typed event>.serializeInto() is compared to the raw
+	// event parsed from the generated _out file.
+
+	// This is so complicated, because float formatting makes direct comparisons
+	// with a file provided by another application basically impossible.
+
+	std::fstream inputFile(filePath);
+	BOOST_REQUIRE(inputFile.is_open());
+	std::string outputFileName = filePath + "_out";
+	std::filesystem::remove(outputFileName);
+	std::fstream outputFile;
+	outputFile.open(outputFileName, std::ios::out);
+	BOOST_REQUIRE(outputFile.is_open());
+
+	{ // parse raw and serialize back
+		AggregatingParser parser(inputFile);
+		auto inputResult = parser.parse();
+		// first serializer run
+		Serializer serializer(outputFile);
+		std::for_each(inputResult.begin(), inputResult.end(), [&](const auto& evt){ serializer.write(evt); });
+	}
+	{ // parse generated output file, and test based on that
+		AggregatingParser parser(outputFile);
+		auto inputResult = parser.parseRaw();
+
+		RawSensorEvent evtRawOut;
+		for(const auto& evtRawIn : inputResult) {
+			SensorEvent sensorEvent = SensorEvent::parse(evtRawIn);
+			sensorEvent.serializeInto(evtRawOut);
+			BOOST_CHECK_EQUAL(evtRawIn.eventId, evtRawOut.eventId);
+			BOOST_CHECK_EQUAL(evtRawIn.timestamp, evtRawOut.timestamp);
+			BOOST_CHECK_EQUAL(evtRawIn.parameterString, evtRawOut.parameterString);
+		}
+	}
+}
+
+
 BOOST_AUTO_TEST_CASE ( parseSerializeEquality ) {
+	parseRawSerializeEqualityFile("testFiles/radioData.csv");
+	parseRawSerializeEqualityFile("testFiles/sensorData.csv");
+
 	parseSerializeEqualityFile("testFiles/radioData.csv");
 	parseSerializeEqualityFile("testFiles/sensorData.csv");
 }

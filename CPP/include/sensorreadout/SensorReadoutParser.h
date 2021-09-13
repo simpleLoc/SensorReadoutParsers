@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cinttypes>
+#include <charconv>
 #include <string>
 #include <string_view>
 #include <cstring>
@@ -65,6 +66,7 @@ public:
 	uint8_t& operator[](size_t idx);
 
 	std::string toString() const;
+	std::string toColonDelimitedString() const;
 
 	bool operator==(const MacAddress& o);
 };
@@ -92,18 +94,9 @@ namespace _internal {
 	#define exceptAssert(cond, exceptionStr) if(!(cond)) { throw std::runtime_error(exceptionStr); }
 	#define exceptWhen(cond, exceptionStr) if((cond)) { throw std::runtime_error(exceptionStr); }
 
-	template<typename TValue>
-	TValue fromStringView(const std::string_view& str, const char* format) {
-		TValue result;
-		//FIXME: This is broken! string_views are not necessarily zero-terminated, since they are
-		// a section from somewhere mid in a string. There is no s<n>scanf variant that takes a max length
-		// unfortunately. And std::istringstream is not constructible on string_views...
-		exceptAssert(sscanf(str.data(), format, &result) == 1, "Failed to parse token to value");
-		return result;
-	}
-
 	template<typename TValue> TValue fromStringView([[maybe_unused]] const std::string_view& str) { return TValue::unimplemented_function(); }
 	// declarations of fromStringView implementations/specializations
+	template<> bool fromStringView(const std::string_view&);
 	template<> uint8_t fromStringView(const std::string_view&);
 	template<> int8_t fromStringView(const std::string_view&);
 	template<> uint16_t fromStringView(const std::string_view&);
@@ -170,6 +163,22 @@ namespace _internal {
 		bool isEOS() const {
 			return ptr > str.length();
 		}
+	};
+
+	class ParameterAssembler {
+	private:
+		std::ostringstream stream;
+
+	public:
+		ParameterAssembler() {
+			stream.precision(15);
+		}
+		template<typename TValue> void push(TValue value) {
+			if(stream.tellp() > 0) { stream << ';'; }
+			stream << value;
+		}
+
+		std::string str() const { return stream.str(); }
 	};
 
 }
@@ -257,7 +266,6 @@ enum class PedestrianActivity : PedestrianActivityId {
 // ###########
 // # ParsedModels (bases)
 // ######################
-
 template<const size_t ARG_CNT = 1, typename TNumericValue = float>
 struct NumericSensorEventBase {
 	using NumericValue = TNumericValue;
@@ -277,17 +285,16 @@ struct NumericSensorEventBase {
 
 	void parse(const std::string& parameterString) {
 		NumericValue* resultPtr = reinterpret_cast<NumericValue*>(this);
-		std::stringstream stream(parameterString);
-		char delimiter = 0;
+		_internal::Tokenizer<';'> tokenizer(parameterString);
 		for(size_t i = 0; i < ARG_CNT; ++i) {
-			exceptAssert(stream.good(), "Unexpectedly reached EOS.");
-			stream >> resultPtr[i];
-			if(i != (ARG_CNT - 1)) {
-				stream.read(&delimiter, 1);
-				exceptAssert(delimiter == ';', "Found unexpected character != ;");
-			} else {
-				exceptAssert(stream.read(&delimiter, 1).fail(), "Too much input.");
-			}
+			resultPtr[i] = tokenizer.nextAs<NumericValue>();
+		}
+	}
+
+	void serializeInto(_internal::ParameterAssembler& stream) const {
+		const NumericValue* resultPtr = reinterpret_cast<const NumericValue*>(this);
+		for(size_t i = 0; i < ARG_CNT; ++i) {
+			stream.push(resultPtr[i]);
 		}
 	}
 };
@@ -317,6 +324,7 @@ struct WifiEvent {
 	std::vector<WifiAdvertisement> advertisements;
 
 	void parse(const std::string& parameterString);
+	void serializeInto(_internal::ParameterAssembler& stream) const;
 };
 struct BLEEvent {
 	MacAddress mac;
@@ -324,6 +332,7 @@ struct BLEEvent {
 	BluetoothTxPower txPower;
 
 	void parse(const std::string& parameterString);
+	void serializeInto(_internal::ParameterAssembler& stream) const;
 };
 struct RelativeHumidityEvent : public NumericSensorEventBase<1> {
 	float relativeHumidity;
@@ -344,11 +353,23 @@ struct AmbientTemperatureEvent : public NumericSensorEventBase<1> {
 struct HeartRateEvent : public NumericSensorEventBase<1> {
 	float heartRate;
 };
-struct GPSEvent {
-	void parse(const std::string& parameterString);
+struct GPSEvent : public NumericSensorEventBase<4> {
+	float lat;
+	float lon;
+	float alt;
+	float bearing;
 };
 struct WifiRTTEvent {
+	bool success;
+	MacAddress mac;
+	float distance;
+	float distanceStdDev;
+	Rssi rssi;
+	size_t numAttempted;
+	size_t numSuccessfull;
+
 	void parse(const std::string& parameterString);
+	void serializeInto(_internal::ParameterAssembler& stream) const;
 };
 struct GameRotationVectorEvent : public XYZSensorEventBase {};
 struct EddystoneUIDEvent {
@@ -358,6 +379,7 @@ struct EddystoneUIDEvent {
 	UUID uid;
 
 	void parse(const std::string& parameterString);
+	void serializeInto(_internal::ParameterAssembler& stream) const;
 };
 struct DecawaveUWBEvent {
 	float x;
@@ -367,6 +389,7 @@ struct DecawaveUWBEvent {
 	std::vector<DecawaveUWBMeasurement> anchorMeasurements;
 
 	void parse(const std::string& parameterString);
+	void serializeInto(_internal::ParameterAssembler& stream) const;
 };
 struct StepDetectorEvent : public NumericSensorEventBase<1> {
 	float probability;
@@ -381,17 +404,14 @@ struct PedestrianActivityEvent {
 	PedestrianActivity activity;
 
 	void parse(const std::string& parameterString);
+	void serializeInto(_internal::ParameterAssembler& stream) const;
 };
-struct GroundTruthEvent {
+struct GroundTruthEvent : public NumericSensorEventBase<1, size_t> {
 	size_t groundTruthId;
-
-	void parse(const std::string& parameterString);
 };
-struct GroundTruthPathEvent {
+struct GroundTruthPathEvent : public NumericSensorEventBase<2, size_t> {
 	size_t pathId;
 	size_t groundTruthPointCnt;
-
-	void parse(const std::string& parameterString);
 };
 struct FileMetadataEvent {
 	std::string date;
@@ -399,6 +419,7 @@ struct FileMetadataEvent {
 	std::string comment;
 
 	void parse(const std::string& parameterString);
+	void serializeInto(_internal::ParameterAssembler& stream) const;
 };
 
 
@@ -414,6 +435,7 @@ struct SensorEvent {
 	EventData data;
 
 	static SensorEvent parse(const RawSensorEvent& rawEvent);
+	void serializeInto(RawSensorEvent& rawEvent) const;
 };
 
 enum class FileVersion {
@@ -476,6 +498,7 @@ public:
 	Serializer(std::ostream& stream, FileVersion fileVersion = FileVersion::V1);
 
 	void write(const RawSensorEvent& sensorEvent);
+	void write(const SensorEvent& sensorEvent);
 
 };
 
