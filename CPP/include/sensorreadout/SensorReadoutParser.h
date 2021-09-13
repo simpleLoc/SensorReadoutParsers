@@ -314,9 +314,13 @@ struct LinearAccelerationEvent : public XYZSensorEventBase {};
 struct GyroscopeEvent : public XYZSensorEventBase {};
 struct MagneticFieldEvent : public XYZSensorEventBase {};
 struct PressureEvent : public NumericSensorEventBase<1> {
-	float pressure;
+	float pressureHpa;
 };
-struct OrientationEvent : public XYZSensorEventBase {};
+struct OrientationEvent : public NumericSensorEventBase<3> {
+	float azimuth;
+	float pitch;
+	float roll;
+};
 struct RotationMatrixEvent : public NumericSensorEventBase<9> {
 	float matrix[9];
 };
@@ -362,8 +366,10 @@ struct GPSEvent : public NumericSensorEventBase<4> {
 struct WifiRTTEvent {
 	bool success;
 	MacAddress mac;
-	float distance;
-	float distanceStdDev;
+	/* distance in millimeters */
+	int64_t distanceMM;
+	/* stddev of the distance in millimeters */
+	int64_t distanceStdDevMM;
 	Rssi rssi;
 	size_t numAttempted;
 	size_t numSuccessfull;

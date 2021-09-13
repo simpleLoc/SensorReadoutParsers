@@ -183,8 +183,8 @@ void WifiRTTEvent::parse(const std::string& parameterString) {
 	Tokenizer<';'> tokenizer(parameterString);
 	success = tokenizer.nextAs<bool>();
 	mac = tokenizer.nextAs<MacAddress>();
-	distance = tokenizer.nextAs<float>();
-	distanceStdDev = tokenizer.nextAs<float>();
+	distanceMM = tokenizer.nextAs<int64_t>();
+	distanceStdDevMM = tokenizer.nextAs<int64_t>();
 	rssi = tokenizer.nextAs<Rssi>();
 	numAttempted = tokenizer.nextAs<size_t>();
 	numSuccessfull = tokenizer.nextAs<size_t>();
@@ -192,8 +192,8 @@ void WifiRTTEvent::parse(const std::string& parameterString) {
 void WifiRTTEvent::serializeInto(_internal::ParameterAssembler& stream) const {
 	stream.push(success);
 	stream.push(mac.toString());
-	stream.push(distance);
-	stream.push(distanceStdDev);
+	stream.push(distanceMM);
+	stream.push(distanceStdDevMM);
 	stream.push(rssi);
 	stream.push(numAttempted);
 	stream.push(numSuccessfull);
