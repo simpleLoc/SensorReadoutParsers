@@ -416,6 +416,13 @@ struct SensorEvent {
 	static SensorEvent parse(const RawSensorEvent& rawEvent);
 };
 
+enum class FileVersion {
+	/** This file format uses millisecond timestamps */
+	V0,
+	/** This file format uses nanosecond timestamps */
+	V1
+};
+
 
 // ###########
 // # VisitingParser
@@ -425,9 +432,10 @@ class VisitingParser {
 
 private: // Parser state
 	std::istream& stream;
+	FileVersion fileVersion;
 
 public: // API-Surface
-	VisitingParser(std::istream& stream);
+	VisitingParser(std::istream& stream, FileVersion fileVersion = FileVersion::V1);
 
 	bool nextLine(RawSensorEvent& sensorEvent);
 };
@@ -447,7 +455,7 @@ private:
 	VisitingParser parser;
 
 public:
-	AggregatingParser(std::istream& stream);
+	AggregatingParser(std::istream& stream, FileVersion fileVersion = FileVersion::V1);
 
 	AggregatedParseResult parse();
 	AggregatedRawParseResult parseRaw();
@@ -462,9 +470,10 @@ class Serializer {
 
 private: // Serializer state
 	std::ostream& stream;
+	FileVersion fileVersion;
 
 public:
-	Serializer(std::ostream& stream);
+	Serializer(std::ostream& stream, FileVersion fileVersion = FileVersion::V1);
 
 	void write(const RawSensorEvent& sensorEvent);
 

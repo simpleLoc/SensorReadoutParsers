@@ -102,7 +102,7 @@ uint8_t MacAddress::operator[](size_t idx) const {
 	return mac[idx];
 }
 
-uint8_t &MacAddress::operator[](size_t idx) {
+uint8_t& MacAddress::operator[](size_t idx) {
 	return mac[idx];
 }
 
@@ -115,7 +115,7 @@ std::string MacAddress::toString() const {
 	return macString;
 }
 
-bool MacAddress::operator==(const MacAddress &o) {
+bool MacAddress::operator==(const MacAddress& o) {
 	for(size_t i = 0; i < MAC_LENGTH; ++i) {
 		if(o.mac[i] != mac[i]) { return false; }
 	}
@@ -223,7 +223,7 @@ void FileMetadataEvent::parse(const std::string& parameterString) {
 	exceptAssert(date.length() > 0, "FileMetadata date is empty.");
 }
 
-SensorEvent SensorEvent::parse(const RawSensorEvent &rawEvent) {
+SensorEvent SensorEvent::parse(const RawSensorEvent& rawEvent) {
 #define SENSOR_EVENT_PARSE_CASE(EvtType, EvtStruct) \
 	case EvtType: { \
 	EvtStruct evt; \
@@ -277,9 +277,9 @@ SensorEvent SensorEvent::parse(const RawSensorEvent &rawEvent) {
 // # VisitingParser
 // ######################
 
-VisitingParser::VisitingParser(std::istream &stream) : stream(stream) {}
+VisitingParser::VisitingParser(std::istream& stream, FileVersion fileVersion) : stream(stream), fileVersion(fileVersion) {}
 
-bool VisitingParser::nextLine(RawSensorEvent &sensorEvent) {
+bool VisitingParser::nextLine(RawSensorEvent& sensorEvent) {
 	if(!stream.good()) {
 		if(stream.fail()) { throw std::runtime_error("An error occured while reading the SensorReadout file."); }
 		return false;
@@ -293,6 +293,9 @@ bool VisitingParser::nextLine(RawSensorEvent &sensorEvent) {
 	exceptAssert(
 		std::from_chars(line.data(), line.data() + dIdx, sensorEvent.timestamp).ec == std::errc(),
 		 "Timestamp parsing error");
+	if(fileVersion == FileVersion::V0) { // transform timestamp from ms to ns
+		sensorEvent.timestamp *= 1000000;
+	}
 	std::string::size_type dIdx2 = line.find(';', dIdx + 1);
 	exceptWhen( // First section empty - no event id
 		(dIdx2 == std::string::npos || (dIdx2 - dIdx) < 2),
@@ -310,7 +313,7 @@ bool VisitingParser::nextLine(RawSensorEvent &sensorEvent) {
 // # AggregatingParser
 // ######################
 
-AggregatingParser::AggregatingParser(std::istream &stream) : parser(stream) {}
+AggregatingParser::AggregatingParser(std::istream& stream, FileVersion fileVersion) : parser(stream, fileVersion) {}
 
 AggregatingParser::AggregatedParseResult AggregatingParser::parse() {
 	AggregatedParseResult result;
@@ -335,10 +338,11 @@ AggregatingParser::AggregatedRawParseResult AggregatingParser::parseRaw() {
 // # Serializer
 // ######################
 
-Serializer::Serializer(std::ostream &stream) : stream(stream) {}
+Serializer::Serializer(std::ostream& stream, FileVersion fileVersion) : stream(stream), fileVersion(fileVersion) {}
 
-void Serializer::write(const RawSensorEvent &sensorEvent) {
-	stream << sensorEvent.timestamp << ";";
+void Serializer::write(const RawSensorEvent& sensorEvent) {
+	auto timestamp = (fileVersion == FileVersion::V0) ? (sensorEvent.timestamp / 1000000) : sensorEvent.timestamp;
+	stream << timestamp << ";";
 	stream << sensorEvent.eventId << ";";
 	stream << sensorEvent.parameterString << std::endl;
 	exceptAssert(stream.good(), "I/O error");
