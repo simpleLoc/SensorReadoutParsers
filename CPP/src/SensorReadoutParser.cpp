@@ -149,6 +149,10 @@ void WifiEvent::parse(const std::string& parameterString) {
 
 	try {
 		while(!tokenizer.isEOS()) {
+			// this event sometimes had a trailing `;`, so we handle this by
+			// peeking and aborting early on.
+			if(tokenizer.peekNext().value() == "") { break; }
+
 			advertisement.mac = tokenizer.nextAs<MacAddress>();
 			advertisement.channelFreq = tokenizer.nextAs<WifiFrequency>();
 			advertisement.rssi = tokenizer.nextAs<Rssi>();

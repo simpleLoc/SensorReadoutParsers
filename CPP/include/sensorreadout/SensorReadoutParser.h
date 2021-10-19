@@ -3,6 +3,7 @@
 #include <array>
 #include <cinttypes>
 #include <charconv>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <cstring>
@@ -128,6 +129,16 @@ namespace _internal {
 			exceptAssert(ptr >= str.length(), "Remaining unparsed tokens. This is regarded as error.");
 		}
 
+		std::optional<std::string_view> peekNext() {
+			std::string_view result;
+			if(isEOS()) { return {}; }
+			auto nextSepPtr = str.find(SEPERATOR, ptr);
+			if(nextSepPtr == std::string::npos) { // reached EOS, no further tokens
+				nextSepPtr = str.length();
+			}
+			result = str.substr(ptr, (nextSepPtr - ptr));
+			return result;
+		}
 		std::string_view next() {
 			std::string_view result;
 			exceptAssert(!isEOS(), "Unexpected EOS");
