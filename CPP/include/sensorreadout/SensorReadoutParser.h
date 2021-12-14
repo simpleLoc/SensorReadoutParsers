@@ -413,8 +413,13 @@ struct DecawaveUWBEvent {
 	void parse(const std::string& parameterString);
 	void serializeInto(_internal::ParameterAssembler& stream) const;
 };
-struct StepDetectorEvent : public NumericSensorEventBase<1> {
+struct StepDetectorEvent {
+	Timestamp stepStartTs;
+	Timestamp stepEndTs;
 	float probability;
+
+	void parse(const std::string& parameterString);
+	void serializeInto(_internal::ParameterAssembler& stream) const;
 };
 struct HeadingChangeEvent : public NumericSensorEventBase<1, double> {
 	double headingChangeRad;

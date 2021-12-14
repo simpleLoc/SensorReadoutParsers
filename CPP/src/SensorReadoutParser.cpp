@@ -218,6 +218,18 @@ void EddystoneUIDEvent::serializeInto(_internal::ParameterAssembler& stream) con
 	stream.push(uid.toString());
 }
 
+void StepDetectorEvent::parse(const std::string& parameterString) {
+	Tokenizer<';'> tokenizer(parameterString);
+	stepStartTs = tokenizer.nextAs<Timestamp>();
+	stepEndTs = tokenizer.nextAs<Timestamp>();
+	probability = tokenizer.nextAs<float>();
+}
+void StepDetectorEvent::serializeInto(_internal::ParameterAssembler& stream) const {
+	stream.push(stepStartTs);
+	stream.push(stepEndTs);
+	stream.push(probability);
+}
+
 void DecawaveUWBEvent::parse(const std::string& parameterString) {
 	Tokenizer<';'> tokenizer(parameterString);
 	// packet header (estimated position + quality)
