@@ -127,7 +127,7 @@ classdef SensorReadoutParser < handle
 			stepEvts(:, 2) = num2cell(rawStepData{1});
 		end
 		
-		function [btAdvertisements, wifiAdvertisements, uwbMeasurements] = parseRadio(self)
+		function [btAdvertisements, wifiAdvertisements, ftmMeasurements, uwbMeasurements] = parseRadio(self)
 			% PARSERADIO Parse radio-specific data from the recording (bluetooth & wifi advertisements)
 			self.ensureLoaded();
 			
@@ -135,6 +135,8 @@ classdef SensorReadoutParser < handle
 			rawBtData = self.rawInputData{3}(btIdxs);
 			wifiIdxs = (self.evtIds == SensorType.WIFI);
 			rawWifiData = self.rawInputData{3}(wifiIdxs);
+			ftmIdxs = (self.evtIds == SensorType.WIFIRTT);
+			rawFtmData = self.rawInputData{3}(ftmIdxs);
 			uwbIdxs = (self.evtIds == SensorType.DECAWAVE_UWB);
 			rawUwbData = self.rawInputData{3}(uwbIdxs);
 			
@@ -143,6 +145,9 @@ classdef SensorReadoutParser < handle
 			btAdvertisements(:,1) = num2cell(self.timestamps(btIdxs));
 			wifiAdvertisements = cell(rows(rawWifiData), 4);
 			wifiAdvertisements(:,1) = num2cell(self.timestamps(wifiIdxs));
+			% success, mac, distanceMM, stdDevDistance, rssi, numAttemptedMeas, numSuccessfulMeas
+			ftmMeasurements = cell(rows(rawFtmData), 8);
+			ftmMeasurements(:, 1) = num2cell(self.timestamps(ftmIdxs));
 			% x,y,z,quality, [id,dist,qual]
 			uwbMeasurements = cell(rows(rawUwbData), 6);
 			uwbMeasurements(:,1) = num2cell(self.timestamps(uwbIdxs));
@@ -158,6 +163,13 @@ classdef SensorReadoutParser < handle
 				wifiAdvertisements(i, 2:end) = textscan(rawWifiData{i}, '%s %d %d', 'Delimiter', ';');
 			end
 			
+			% parse ftm
+			rawFtmData = textscan(strjoin(rawFtmData, '\n'), '%u %s %f %f %d %d %d', 'Delimiter', ';');
+			ftmMeasurements(:, 2) = num2cell([rawFtmData{1}]);
+			ftmMeasurements(:, 3) = rawFtmData{2};
+			ftmMeasurements(:, 4:end) = num2cell([rawFtmData{3:end}]);
+			
+			% parse uwb
 			for i = 1:length(rawUwbData)
 				header = sscanf(rawUwbData{i}, '%f;%f;%f;%d;%s')';
 				uwbMeasurements(i, 2:5) = num2cell(header(1:4));
