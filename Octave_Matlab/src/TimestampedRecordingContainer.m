@@ -42,6 +42,13 @@ classdef TimestampedRecordingContainer < handle
 			self.channelIdxMap(sensorId) = size(self.channels, 1);
 		end
 		
+		function [channelTs, channelData] = getChannel(self, sensorId)
+			assert(self.channelIdxMap.isKey(sensorId), 'Requested sensorId not contained.');
+			channelIdx = self.channelIdxMap(sensorId);
+			channelTs = self.channels{channelIdx, 2};
+			channelData = self.channels{channelIdx, 3};
+		end
+		
 		function setActivityChanges(self, timestamps, activityIds)
 			self.activityChanges{1} = timestamps(:)';
 			self.activityChanges{2} = uint32(activityIds(:)');

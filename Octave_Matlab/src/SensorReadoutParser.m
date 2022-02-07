@@ -12,6 +12,7 @@ classdef SensorReadoutParser < handle
 		
 		% internally cached parse results
 		loaded = false;
+		sorted = false;
 		rawInputData = [];
 		timestamps = [];
 		evtIds = [];
@@ -190,19 +191,78 @@ classdef SensorReadoutParser < handle
 			groundTruthPoints(:,1) = num2cell(self.timestamps(gtIdxs));
 			groundTruthPoints(:,2) = cellfun(@(s) uint64(str2num(s)), gtData, 'UniformOutput', 0);
 		end
+		
+		function validateRecording(self)
+			self.ensureLoaded(false);
+			uniqueSensorIds = unique(self.evtIds);
+			
+			% Validate timestamp variance
+			[timestampVariance, tsVarIdx] = max(diff(self.timestamps));
+			if(timestampVariance > 0.3)
+				printf('ERR: Variance of timestamp-distances is high: [%.2f @ line %d]. Android may have stopped the App in between.\n', timestampVariance, tsVarIdx);
+			end
+			
+			% Validate monotonic ordering of timestamps
+			tsDistances = diff(self.timestamps);
+			tsErrors = (tsDistances < 0);
+			for(errEvtIdx = find(tsErrors))
+				printf('ERR(l: %d) Timestamp not monotonically increased from previous event.\n', errEvtIdx);
+			end
+			
+			% Validate Amount of parameters for each event
+			baseSensorAccess = SensorType.isBaseSensor(self.evtIds);
+			baseSensorIdcs = [1:rows(self.evtIds)](baseSensorAccess);
+			actualArgCnts = strfind(self.rawInputData{3}(baseSensorAccess), ';');
+			actualArgCnts = cellfun(@(s) length(s), actualArgCnts)';
+			shouldArgCnts = SensorType.getSensorEventArgumentCnt(self.evtIds(baseSensorAccess));
+			argCntErrors = (actualArgCnts == shouldArgCnts);
+			for(argCntErrIdx = find(argCntErrors))
+				evtIdx = baseSensorIdcs(argCntErrIdx);
+				printf('ERR(l: %d): Wrong argument-count for eventType %d. Should be: %d, but was: %d\n', evtIdx, self.evtIds(evtIdx), shouldArgCnts(evtIdx), actualArgCnts(evtIdx));
+			end
+			
+			if(sum(argCntErrors) > 0)
+				printf('#############################################################\n');
+				printf('Not running content related checks because of previous errors\n');
+				return;
+			end
+			%##############################
+			% Content related errors
+			%##############################
+			
+			timestampedSensorData = self.parseSensorData();
+			% validate GRAVITY
+			if(ismember(SensorType.GRAVITY, uniqueSensorIds))
+				[gravTs, gravData] = timestampedSensorData.getChannel(SensorType.GRAVITY);
+				if(abs(mean(gravData(:)) - 9.8) <= 0.3)
+					printf('WARN: GRAVITY mean value seems suspicious\n');
+				end
+			end
+			
+			[btAdvertisements, wifiAdvertisements, ftmMeasurements, uwbMeasurements] = self.parseRadio();
+			% TODO: logic rssi value asserts?
+		end
 	end
 	
 	methods(Access = private)
-		function ensureLoaded(self)
+		function ensureLoaded(self, ensureSorted)
+			if ~exist('ensureSorted', 'var')
+				ensureSorted = true;
+			end
 			if(self.loaded == false)
 				[self.rawInputData, self.timestamps, self.evtIds] = SensorReadoutParser.parseFile(self.fileName, self.disableAsserts);
 				self.loaded = true;
+			end
+			if self.sorted == false && ensureSorted
+				assert(self.disableAsserts || ~issorted(self.timestamps), 'Timestamps of recording not ordered');
+				[self.timestamps, sortIdxs] = sort(self.timestamps);
+				self.rawInputData = cellfun(@(c) c(sortIdxs), self.rawInputData, 'UniformOutput', false);
 			end
 		end
 	end
 	
 	methods(Access = private, Static)
-		function [rawInputData, timestamps, evtIds] = parseFile(fileName, disableAsserts)
+		function [rawInputData, timestamps, evtIds] = parseFile(fileName)
 			% parse activity ids / labels
 			fid = fopen(fileName, 'r');
 			if fid == -1
@@ -212,14 +272,6 @@ classdef SensorReadoutParser < handle
 			fclose(fid);
 			
 			timestamps = rawInputData{1} * SensorReadoutParser.TIMESTAMP_MULTIPLIER;
-			if ~issorted(timestamps)
-				if disableAsserts
-					[timestamps, sortIdxs] = sort(timestamps);
-					rawInputData = cellfun(@(c) c(sortIdxs), rawInputData, 'UniformOutput', false);
-				else
-					error(sprintf('[%s] Timestamps of file are not in correct order.\n', fileName));
-				end
-			end
 			timestamps = timestamps - timestamps(1);
 			evtIds = rawInputData{2};
 		end

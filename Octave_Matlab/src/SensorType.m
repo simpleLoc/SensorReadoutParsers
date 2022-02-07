@@ -86,10 +86,10 @@ classdef SensorType
 	
 	
 	
-	methods (Access = public, Static)		
+	methods (Access = public, Static)
 		function result = isBaseSensor(sensorTypeId)
 			assert(isnumeric(sensorTypeId), 'SensorId has to be a positive integer');
-			result = (sensorTypeId >= SensorType.SENSOR_START && sensorTypeId <= SensorType.SENSOR_END);
+			result = (sensorTypeId >= SensorType.SENSOR_START & sensorTypeId <= SensorType.SENSOR_END);
 		end
 
 		function baseSensors = getBaseSensors()
