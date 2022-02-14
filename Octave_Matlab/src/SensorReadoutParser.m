@@ -240,7 +240,18 @@ classdef SensorReadoutParser < handle
 			end
 			
 			[btAdvertisements, wifiAdvertisements, ftmMeasurements, uwbMeasurements] = self.parseRadio();
-			% TODO: logic rssi value asserts?
+			btRssiErrorIdcs = find([btAdvertisements{:,3}] > -40 | [btAdvertisements{:,3}] < -110);
+			wifiRssiErrorIdcs = find([wifiAdvertisements{:,4}] > -20 | [wifiAdvertisements{:,4}] < -100);
+			ftmRssiErrorIdcs = find([ftmMeasurements{:,6}] > -20 | [ftmMeasurements{:,6}] < -100);
+			for(errEvtIdx = btRssiErrorIdcs)
+				printf('WARN(l: %d) BLE Measurement has RSSI value (%f dB) outside expected range [-40,-100].\n', errEvtIdx, btAdvertisements{errEvtIdx, 3});
+			end
+			for(errEvtIdx = wifiRssiErrorIdcs)
+				printf('WARN(l: %d) Wifi Measurement has RSSI value (%f dB) outside expected range [-20,-100].\n', errEvtIdx, wifiAdvertisements{errEvtIdx, 4});
+			end
+			for(errEvtIdx = ftmRssiErrorIdcs)
+				printf('WARN(l: %d) FTM Measurement has RSSI value (%f dB) outside expected range [-40,-100].\n', errEvtIdx, ftmMeasurements{errEvtIdx, 6});
+			end
 		end
 	end
 	
