@@ -265,11 +265,13 @@ void DecawaveUWBEvent::serializeInto(_internal::ParameterAssembler& stream) cons
 
 void PedestrianActivityEvent::parse(const std::string& parameterString) {
 	Tokenizer<';'> tokenizer(parameterString);
-	tokenizer.skipNext(); // skip activity name
-	activity = static_cast<PedestrianActivity>(tokenizer.nextAs<PedestrianActivityId>());
+	rawActivityName = tokenizer.next();
+	rawActivityId = tokenizer.nextAs<PedestrianActivityId>();
+	activity = static_cast<PedestrianActivity>(rawActivityId);
 }
 void PedestrianActivityEvent::serializeInto(_internal::ParameterAssembler& stream) const {
-	stream.push(static_cast<PedestrianActivityId>(activity));
+	stream.push(rawActivityName);
+	stream.push(rawActivityId);
 }
 
 void FileMetadataEvent::parse(const std::string& parameterString) {

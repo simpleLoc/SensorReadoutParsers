@@ -268,3 +268,15 @@ BOOST_AUTO_TEST_CASE ( GroundTruthPathEventParserTest ) {
 	BOOST_CHECK_EQUAL(gtpEvt.pathId, 1337);
 	BOOST_CHECK_EQUAL(gtpEvt.groundTruthPointCnt, 42);
 }
+
+
+BOOST_AUTO_TEST_CASE ( CustomActivityType ) {
+	std::fstream customActivityFile("testFiles/customActivity.csv");
+	SensorReadoutParser::AggregatingParser parser(customActivityFile);
+	auto events = parser.parse();
+	{
+		auto actEvt = std::get<SensorReadoutParser::PedestrianActivityEvent>(events[7].data);
+		BOOST_CHECK_EQUAL(actEvt.rawActivityId, 7);
+		BOOST_CHECK_EQUAL(actEvt.rawActivityName, "CUSTOM_1");
+	}
+}

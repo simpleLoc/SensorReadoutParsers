@@ -429,6 +429,8 @@ struct HeadingChangeEvent : public NumericSensorEventBase<1, double> {
 // #### Special Events ####
 struct PedestrianActivityEvent {
 	PedestrianActivity activity;
+	PedestrianActivityId rawActivityId;
+	std::string rawActivityName;
 
 	void parse(const std::string& parameterString);
 	void serializeInto(_internal::ParameterAssembler& stream) const;
