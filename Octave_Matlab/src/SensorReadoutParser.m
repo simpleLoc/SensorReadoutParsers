@@ -240,18 +240,41 @@ classdef SensorReadoutParser < handle
 			end
 			
 			[btAdvertisements, wifiAdvertisements, ftmMeasurements, uwbMeasurements] = self.parseRadio();
-			btRssiErrorIdcs = find([btAdvertisements{:,3}] > -40 | [btAdvertisements{:,3}] < -110);
+			
+			% RSSI checks
+			btRssiErrorIdcs = find([btAdvertisements{:,3}] > -30 | [btAdvertisements{:,3}] < -110);
 			wifiRssiErrorIdcs = find([wifiAdvertisements{:,4}] > -20 | [wifiAdvertisements{:,4}] < -100);
 			ftmRssiErrorIdcs = find([ftmMeasurements{:,6}] > -20 | [ftmMeasurements{:,6}] < -100);
+			btIdcs = find(self.evtIds == SensorType.IBEACON);
+			wifiIdcs = find(self.evtIds == SensorType.WIFI);
+			ftmIdcs = find(self.evtIds == SensorType.WIFIRTT);
 			for(errEvtIdx = btRssiErrorIdcs)
-				printf('WARN(l: %d) BLE Measurement has RSSI value (%f dB) outside expected range [-40,-100].\n', errEvtIdx, btAdvertisements{errEvtIdx, 3});
+				printf('WARN(l: %d): BLE Measurement has RSSI value (%f dB) outside expected range [-30,-100].\n', btIdcs(errEvtIdx), btAdvertisements{errEvtIdx, 3});
 			end
 			for(errEvtIdx = wifiRssiErrorIdcs)
-				printf('WARN(l: %d) Wifi Measurement has RSSI value (%f dB) outside expected range [-20,-100].\n', errEvtIdx, wifiAdvertisements{errEvtIdx, 4});
+				printf('WARN(l: %d): Wifi Measurement has RSSI value (%f dB) outside expected range [-20,-100].\n', wifiIdcs(errEvtIdx), wifiAdvertisements{errEvtIdx, 4});
 			end
 			for(errEvtIdx = ftmRssiErrorIdcs)
-				printf('WARN(l: %d) FTM Measurement has RSSI value (%f dB) outside expected range [-40,-100].\n', errEvtIdx, ftmMeasurements{errEvtIdx, 6});
+				printf('WARN(l: %d): FTM Measurement has RSSI value (%f dB) outside expected range [-20,-100].\n', ftmIdcs(errEvtIdx), ftmMeasurements{errEvtIdx, 6});
 			end
+			
+			% last event timestamp check
+			lastTimestamp = self.timestamps(end);
+			if(rows(btAdvertisements) > 0 && abs(btAdvertisements{end,1} - lastTimestamp) > 20)
+				printf('WARN: Last Timestamp of BLE events is older than 20 secs. Has recording stopped?\n');
+			end
+			if(rows(wifiAdvertisements) > 0 && abs(wifiAdvertisements{end,1} - lastTimestamp) > 20)
+				printf('WARN: Last Timestamp of Wifi events is older than 20 secs. Has recording stopped?\n');
+			end
+			if(rows(ftmMeasurements) > 0 && abs(ftmMeasurements{end,1} - lastTimestamp) > 20)
+				printf('WARN: Last Timestamp of FTM events is older than 20 secs. Has recording stopped?\n');
+			end
+			if(rows(uwbMeasurements) > 0 && abs(uwbMeasurements{end,1} - lastTimestamp) > 20)
+				printf('WARN: Last Timestamp of UWB events is older than 20 secs. Has recording stopped?\n');
+			end
+			
+			printf('#########################\nRadio Statistics:\n---------------------\n');
+			printf('\tBLE: %d\n\tWifi: %d\n\tFTM: %d\n\tUWB: %d\n', rows(btAdvertisements), rows(wifiAdvertisements), rows(ftmMeasurements), rows(uwbMeasurements));
 		end
 	end
 	
