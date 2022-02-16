@@ -279,4 +279,9 @@ BOOST_AUTO_TEST_CASE ( CustomActivityType ) {
 		BOOST_CHECK_EQUAL(actEvt.rawActivityId, 7);
 		BOOST_CHECK_EQUAL(actEvt.rawActivityName, "CUSTOM_1");
 	}
+	{
+		auto actEvt = std::get<SensorReadoutParser::PedestrianActivityEvent>(events[17].data);
+		BOOST_CHECK_EQUAL(actEvt.rawActivityId, 10);
+		BOOST_CHECK_EQUAL(actEvt.rawActivityName, "CUSTOM_5");
+	}
 }

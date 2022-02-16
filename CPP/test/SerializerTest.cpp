@@ -96,7 +96,9 @@ void parseSerializeEqualityFile(const std::string& filePath) {
 BOOST_AUTO_TEST_CASE ( parseSerializeEquality ) {
 	parseRawSerializeEqualityFile("testFiles/radioData.csv");
 	parseRawSerializeEqualityFile("testFiles/sensorData.csv");
+	parseRawSerializeEqualityFile("testFiles/customActivity.csv");
 
 	parseSerializeEqualityFile("testFiles/radioData.csv");
 	parseSerializeEqualityFile("testFiles/sensorData.csv");
+	parseSerializeEqualityFile("testFiles/customActivity.csv");
 }
