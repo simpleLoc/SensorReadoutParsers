@@ -14,4 +14,4 @@ printf('Validating Recording: %s\n', fileName);
 % # Parse & Validate
 % #########################################################################
 parser = SensorReadoutParser(fileName, true);
-parser.validateRecording();
+[errCnt, warnCnt] = parser.validateRecording();

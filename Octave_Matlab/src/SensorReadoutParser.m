@@ -192,21 +192,34 @@ classdef SensorReadoutParser < handle
 			groundTruthPoints(:,2) = cellfun(@(s) uint64(str2num(s)), gtData, 'UniformOutput', 0);
 		end
 		
-		function validateRecording(self)
+		function [errorCnt, warnCnt] = validateRecording(self)
+			errorCnt = 0;
+			warnCnt = 0;
 			self.ensureLoaded(false);
 			uniqueSensorIds = unique(self.evtIds);
+			sortedTimestamps = sort(self.timestamps);
+			unsortedTimestampDistances = diff(self.timestamps);
+			sortedTimestampDistances = diff(sortedTimestamps);
 			
 			% Validate timestamp variance
-			[timestampVariance, tsVarIdx] = max(diff(self.timestamps));
+			[timestampVariance, tsVarIdx] = max(sortedTimestampDistances);
 			if(timestampVariance > 0.3)
+				errorCnt = errorCnt + 1;
 				printf('ERR: Variance of timestamp-distances is high: [%.2f @ line %d]. Android may have stopped the App in between.\n', timestampVariance, tsVarIdx);
 			end
 			
 			% Validate monotonic ordering of timestamps
-			tsDistances = diff(self.timestamps);
-			tsErrors = (tsDistances < 0);
+			tsErrors = (unsortedTimestampDistances < 0);
 			for(errEvtIdx = find(tsErrors))
+				errorCnt = errorCnt + 1;
 				printf('ERR(l: %d) Timestamp not monotonically increased from previous event.\n', errEvtIdx);
+			end
+			if(any(tsErrors) != 0)
+				plot(sortedTimestampDistances);
+				hold on;
+				plot(unsortedTimestampDistances);
+				legend('Sorted', 'Unsorted');
+				hold off;
 			end
 			
 			% Validate Amount of parameters for each event
@@ -217,6 +230,7 @@ classdef SensorReadoutParser < handle
 			shouldArgCnts = SensorType.getSensorEventArgumentCnt(self.evtIds(baseSensorAccess));
 			argCntErrors = (actualArgCnts == shouldArgCnts);
 			for(argCntErrIdx = find(argCntErrors))
+				errorCnt = errorCnt + 1;
 				evtIdx = baseSensorIdcs(argCntErrIdx);
 				printf('ERR(l: %d): Wrong argument-count for eventType %d. Should be: %d, but was: %d\n', evtIdx, self.evtIds(evtIdx), shouldArgCnts(evtIdx), actualArgCnts(evtIdx));
 			end
@@ -235,6 +249,7 @@ classdef SensorReadoutParser < handle
 			if(ismember(SensorType.GRAVITY, uniqueSensorIds))
 				[gravTs, gravData] = timestampedSensorData.getChannel(SensorType.GRAVITY);
 				if(abs(mean(gravData(:)) - 9.8) <= 0.3)
+					warnCnt = warnCnt + 1;
 					printf('WARN: GRAVITY mean value seems suspicious\n');
 				end
 			end
@@ -249,27 +264,34 @@ classdef SensorReadoutParser < handle
 			wifiIdcs = find(self.evtIds == SensorType.WIFI);
 			ftmIdcs = find(self.evtIds == SensorType.WIFIRTT);
 			for(errEvtIdx = btRssiErrorIdcs)
+				warnCnt = warnCnt + 1;
 				printf('WARN(l: %d): BLE Measurement has RSSI value (%f dB) outside expected range [-30,-100].\n', btIdcs(errEvtIdx), btAdvertisements{errEvtIdx, 3});
 			end
 			for(errEvtIdx = wifiRssiErrorIdcs)
+				warnCnt = warnCnt + 1;
 				printf('WARN(l: %d): Wifi Measurement has RSSI value (%f dB) outside expected range [-20,-100].\n', wifiIdcs(errEvtIdx), wifiAdvertisements{errEvtIdx, 4});
 			end
 			for(errEvtIdx = ftmRssiErrorIdcs)
+				warnCnt = warnCnt + 1;
 				printf('WARN(l: %d): FTM Measurement has RSSI value (%f dB) outside expected range [-20,-100].\n', ftmIdcs(errEvtIdx), ftmMeasurements{errEvtIdx, 6});
 			end
 			
 			% last event timestamp check
 			lastTimestamp = self.timestamps(end);
 			if(rows(btAdvertisements) > 0 && abs(btAdvertisements{end,1} - lastTimestamp) > 20)
+				warnCnt = warnCnt + 1;
 				printf('WARN: Last Timestamp of BLE events is older than 20 secs. Has recording stopped?\n');
 			end
 			if(rows(wifiAdvertisements) > 0 && abs(wifiAdvertisements{end,1} - lastTimestamp) > 20)
+				warnCnt = warnCnt + 1;
 				printf('WARN: Last Timestamp of Wifi events is older than 20 secs. Has recording stopped?\n');
 			end
 			if(rows(ftmMeasurements) > 0 && abs(ftmMeasurements{end,1} - lastTimestamp) > 20)
+				warnCnt = warnCnt + 1;
 				printf('WARN: Last Timestamp of FTM events is older than 20 secs. Has recording stopped?\n');
 			end
 			if(rows(uwbMeasurements) > 0 && abs(uwbMeasurements{end,1} - lastTimestamp) > 20)
+				warnCnt = warnCnt + 1;
 				printf('WARN: Last Timestamp of UWB events is older than 20 secs. Has recording stopped?\n');
 			end
 			
@@ -291,6 +313,8 @@ classdef SensorReadoutParser < handle
 				assert(self.disableAsserts || ~issorted(self.timestamps), 'Timestamps of recording not ordered');
 				[self.timestamps, sortIdxs] = sort(self.timestamps);
 				self.rawInputData = cellfun(@(c) c(sortIdxs), self.rawInputData, 'UniformOutput', false);
+				self.timestamps = self.rawInputData{1};
+				self.evtIds = self.rawInputData{2};
 			end
 		end
 	end
