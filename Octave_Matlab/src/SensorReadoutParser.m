@@ -277,7 +277,7 @@ classdef SensorReadoutParser < handle
 			end
 			
 			% last event timestamp check
-			lastTimestamp = self.timestamps(end);
+			lastTimestamp = sortedTimestamps(end);
 			if(rows(btAdvertisements) > 0 && abs(btAdvertisements{end,1} - lastTimestamp) > 20)
 				warnCnt = warnCnt + 1;
 				printf('WARN: Last Timestamp of BLE events is older than 20 secs. Has recording stopped?\n');
