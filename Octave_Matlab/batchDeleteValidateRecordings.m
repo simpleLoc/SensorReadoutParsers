@@ -16,7 +16,13 @@ if(strcmp(result{1}, 'yes') == 1)
 		% # Parse & Validate
 		% #########################################################################
 		parser = SensorReadoutParser(recFilePath, true);
-		[errCnt, warnCnt] = parser.validateRecording();
+		
+		try
+			[errCnt, warnCnt] = parser.validateRecording();
+		catch e
+			printf('Recording caused assertion\n');
+			continue;
+		end
 		
 		if(errCnt == 0)
 			delete(recFilePath)

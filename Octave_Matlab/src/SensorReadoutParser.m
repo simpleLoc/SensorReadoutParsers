@@ -244,14 +244,20 @@ classdef SensorReadoutParser < handle
 			% Content related errors
 			%##############################
 			
-			timestampedSensorData = self.parseSensorData();
-			% validate GRAVITY
-			if(ismember(SensorType.GRAVITY, uniqueSensorIds))
-				[gravTs, gravData] = timestampedSensorData.getChannel(SensorType.GRAVITY);
-				if(abs(mean(gravData(:)) - 9.8) <= 0.3)
-					warnCnt = warnCnt + 1;
-					printf('WARN: GRAVITY mean value seems suspicious\n');
+			try
+				timestampedSensorData = self.parseSensorData();
+				
+				% validate GRAVITY
+				if(ismember(SensorType.GRAVITY, uniqueSensorIds))
+					[gravTs, gravData] = timestampedSensorData.getChannel(SensorType.GRAVITY);
+					if(abs(mean(gravData(:)) - 9.8) <= 0.3)
+						warnCnt = warnCnt + 1;
+						printf('WARN: GRAVITY mean value seems suspicious\n');
+					end
 				end
+			catch e
+				warnCnt = warnCnt + 1;	
+				printf('WARN: Recording does not contain any base sensors\n');
 			end
 			
 			[btAdvertisements, wifiAdvertisements, ftmMeasurements, uwbMeasurements] = self.parseRadio();
@@ -306,21 +312,26 @@ classdef SensorReadoutParser < handle
 				ensureSorted = true;
 			end
 			if(self.loaded == false)
-				[self.rawInputData, self.timestamps, self.evtIds] = SensorReadoutParser.parseFile(self.fileName, self.disableAsserts);
+				self.rawInputData = SensorReadoutParser.parseFile(self.fileName, self.disableAsserts);
+				self.syncFastAccessArrays();
 				self.loaded = true;
 			end
 			if self.sorted == false && ensureSorted
-				assert(self.disableAsserts || ~issorted(self.timestamps), 'Timestamps of recording not ordered');
+				assert(self.disableAsserts || issorted(self.timestamps), 'Timestamps of recording not ordered');
 				[self.timestamps, sortIdxs] = sort(self.timestamps);
 				self.rawInputData = cellfun(@(c) c(sortIdxs), self.rawInputData, 'UniformOutput', false);
-				self.timestamps = self.rawInputData{1};
-				self.evtIds = self.rawInputData{2};
+				self.syncFastAccessArrays();
 			end
+		end
+		function syncFastAccessArrays(self)
+			self.timestamps = self.rawInputData{1} * SensorReadoutParser.TIMESTAMP_MULTIPLIER;
+			self.timestamps = self.timestamps - min(self.timestamps);
+			self.evtIds = self.rawInputData{2};
 		end
 	end
 	
 	methods(Access = private, Static)
-		function [rawInputData, timestamps, evtIds] = parseFile(fileName)
+		function rawInputData = parseFile(fileName)
 			% parse activity ids / labels
 			fid = fopen(fileName, 'r');
 			if fid == -1
@@ -328,10 +339,6 @@ classdef SensorReadoutParser < handle
 			end
 			rawInputData = textscan(fid, '%f;%d;%s', 'Delimiter', '\n');
 			fclose(fid);
-			
-			timestamps = rawInputData{1} * SensorReadoutParser.TIMESTAMP_MULTIPLIER;
-			timestamps = timestamps - timestamps(1);
-			evtIds = rawInputData{2};
 		end
 	end
 end

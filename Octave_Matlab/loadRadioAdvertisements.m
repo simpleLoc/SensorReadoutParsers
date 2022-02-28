@@ -13,7 +13,7 @@ fileName = [cutFilePath, cutFile];
 % # Parse & Resample
 % #########################################################################
 parser = SensorReadoutParser(fileName, false);
-[btAdvertisements, wifiAdvertisements, uwbMeasurements] = parser.parseRadio();
+[btAdvertisements, wifiAdvertisements, ftmMeasurements, uwbMeasurements] = parser.parseRadio();
 groundTruthPoints = parser.parseGroundTruthPoints();
 
 % #########################################################################
