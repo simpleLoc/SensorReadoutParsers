@@ -151,9 +151,21 @@ namespace _internal {
 			return result;
 		}
 
-		template<typename TValue> TValue nextAs() {
+		template<typename TValue, const char* SKIP_CTRL_CHARS = nullptr> TValue nextAs() {
 			try {
-				return fromStringView<TValue>(next());
+				std::string_view nextValue = next();
+				if constexpr(SKIP_CTRL_CHARS != nullptr) {
+					// trim control characters
+					auto startTrimPos = nextValue.find_first_not_of(SKIP_CTRL_CHARS);
+					if(startTrimPos != nextValue.npos) {
+						nextValue.remove_prefix(startTrimPos);
+						auto endTrimPos = nextValue.find_last_of(SKIP_CTRL_CHARS);
+						if(endTrimPos != nextValue.npos) { // backtrim required
+							nextValue.remove_suffix(nextValue.size() - endTrimPos);
+						}
+					}
+				}
+				return fromStringView<TValue>(nextValue);
 			} catch (std::runtime_error& e) {
 				ptr = str.length();
 				throw e;
