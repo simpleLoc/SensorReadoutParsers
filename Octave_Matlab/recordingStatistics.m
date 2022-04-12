@@ -14,7 +14,7 @@ printf('Generating Recording Statistics: %s\n', fileName);
 % #########################################################################
 % # Parse & Generate Statistics
 % #########################################################################
-parser = SensorReadoutParser(fileName, false);
+parser = SensorReadoutParser(fileName, true);
 
 % #########################################################################
 % # Generate Base Statistics
@@ -25,18 +25,23 @@ sensorSelector = SensorSelector()...
 	.useSensor(SensorType.MAGNETIC_FIELD);
 timestampedSensorData = parser.parseSensorData();
 
-[accTimestamps, accData] = timestampedSensorData.getChannel(SensorType.ACCELEROMETER);
-[gyroTimestamps, gyroData] = timestampedSensorData.getChannel(SensorType.GYROSCOPE);
-[magnTimestamps, magnData] = timestampedSensorData.getChannel(SensorType.MAGNETIC_FIELD);
-
-accHz = 1/mean(diff(accTimestamps));
-gyroHz = 1/mean(diff(gyroTimestamps));
-magnHz = 1/mean(diff(magnTimestamps));
-
 fprintf('=== IMU Statistics ===\n');
-fprintf('\tAccelerometer: %f Hz\n', accHz);
-fprintf('\tGyroscope: %f Hz\n', gyroHz);
-fprintf('\tMagnetic Field Sensor: %f Hz\n', magnHz);
+if timestampedSensorData.hasSensorId(SensorType.ACCELEROMETER)
+	[accTimestamps, accData] = timestampedSensorData.getChannel(SensorType.ACCELEROMETER);
+	accHz = 1/mean(diff(accTimestamps));
+	fprintf('\tAccelerometer: %f Hz\n', accHz);
+end
+if timestampedSensorData.hasSensorId(SensorType.GYROSCOPE)
+	[gyroTimestamps, gyroData] = timestampedSensorData.getChannel(SensorType.GYROSCOPE);
+	gyroHz = 1/mean(diff(gyroTimestamps));
+	fprintf('\tGyroscope: %f Hz\n', gyroHz);
+end
+if timestampedSensorData.hasSensorId(SensorType.MAGNETIC_FIELD)
+	[magnTimestamps, magnData] = timestampedSensorData.getChannel(SensorType.MAGNETIC_FIELD);
+	magnHz = 1/mean(diff(magnTimestamps));
+	fprintf('\tMagnetic Field Sensor: %f Hz\n', magnHz);
+end
+
 
 % #########################################################################
 % # Generate Radio Statistics

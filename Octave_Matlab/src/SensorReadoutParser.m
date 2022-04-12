@@ -103,7 +103,7 @@ classdef SensorReadoutParser < handle
 			
 			% apply sensorTypeIdWhitelist
 			sensorIds = sensorIds(ismember(sensorIds, self.sensorTypeIdWhitelist))';
-			assert(numel(sensorIds) > 0, 'Amount of exported sensors is 0. Recording does not contain any whitelisted sensors.');
+			assert(self.disableAsserts || numel(sensorIds) > 0, 'Amount of exported sensors is 0. Recording does not contain any whitelisted sensors.');
 			
 			for sensorId = sensorIds
 				accessIdxs = (self.evtIds == sensorId);

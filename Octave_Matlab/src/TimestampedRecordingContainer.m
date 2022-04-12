@@ -83,7 +83,9 @@ classdef TimestampedRecordingContainer < handle
 				startTimestamps(c) = self.channels{c,2}(1); % get first timestamp for channel
 			end
 			startTimestamp = max(startTimestamps);
-			assert(max(abs(startTimestamps - startTimestamp)) < 2.0, 'High variance in start timestamps detected. Slow sensor startup causing huge throw-away!');
+			if(max(abs(startTimestamps - startTimestamp)) < 2.0)
+				disp('WARNING: High variance in start timestamps detected. Slow sensor startup causing huge throw-away!');
+			end
 		end
 	end
 end

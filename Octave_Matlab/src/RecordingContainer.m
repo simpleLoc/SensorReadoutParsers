@@ -57,6 +57,7 @@ classdef RecordingContainer < handle
 		end
 		
 		function sensorStream = getSensorStream(self, sensorTypeId)
+			assert(self.sensorIdxMap.isKey(uint64(sensorTypeId)), 'Requested sensor not contained in stream!');
 			sensorStream = self.data{self.sensorIdxMap(uint64(sensorTypeId))};
 		end
 		
