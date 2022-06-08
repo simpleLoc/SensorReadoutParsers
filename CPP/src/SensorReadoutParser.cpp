@@ -230,6 +230,24 @@ void StepDetectorEvent::serializeInto(_internal::ParameterAssembler& stream) con
 	stream.push(probability);
 }
 
+void FutureShapeSensFloorEvent::parse(const std::string& parameterString) {
+	Tokenizer<';'> tokenizer(parameterString);
+	roomId = tokenizer.nextAs<uint16_t>();
+	x = tokenizer.nextAs<uint8_t>();
+	y = tokenizer.nextAs<uint8_t>();
+	for(size_t i = 0; i < fieldCapacities.size(); ++i) {
+		fieldCapacities[i] = tokenizer.nextAs<uint8_t>();
+	}
+}
+void FutureShapeSensFloorEvent::serializeInto(_internal::ParameterAssembler& stream) const {
+	stream.push(roomId);
+	stream.push((int)x);
+	stream.push((int)y);
+	for(size_t i = 0; i < this->fieldCapacities.size(); ++i) {
+		stream.push((int)fieldCapacities[i]);
+	}
+}
+
 void DecawaveUWBEvent::parse(const std::string& parameterString) {
 	Tokenizer<';'> tokenizer(parameterString);
 	// packet header (estimated position + quality)
@@ -323,6 +341,7 @@ SensorEvent SensorEvent::parse(const RawSensorEvent& rawEvent) {
 		SENSOR_EVENT_PARSE_CASE(EventType::DecawaveUWB, DecawaveUWBEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::StepDetector, StepDetectorEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::HeadingChange, HeadingChangeEvent)
+		SENSOR_EVENT_PARSE_CASE(EventType::FutureShapeSensFloor, FutureShapeSensFloorEvent)
 		// Special events
 		SENSOR_EVENT_PARSE_CASE(EventType::PedestrianActivity, PedestrianActivityEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::GroundTruth, GroundTruthEvent)
@@ -369,6 +388,7 @@ void SensorEvent::serializeInto(RawSensorEvent& rawEvent) const {
 		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::DecawaveUWB, DecawaveUWBEvent)
 		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::StepDetector, StepDetectorEvent)
 		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::HeadingChange, HeadingChangeEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::FutureShapeSensFloor, FutureShapeSensFloorEvent)
 		// Special events
 		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::PedestrianActivity, PedestrianActivityEvent)
 		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::GroundTruth, GroundTruthEvent)

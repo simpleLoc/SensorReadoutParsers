@@ -240,6 +240,7 @@ static constexpr EventId EVENTID_EDDYSTONE_UID = 19;
 static constexpr EventId EVENTID_DECAWAVE_UWB = 20;
 static constexpr EventId EVENTID_STEP_DETECTOR = 21;
 static constexpr EventId EVENTID_HEADING_CHANGE = 22;
+static constexpr EventId EVENTID_FUTURESHAPE_SENSFLOOR = 23;
 // ------
 static constexpr EventId EVENTID_PEDESTRIAN_ACTIVITY = 50;
 static constexpr EventId EVENTID_GROUND_TRUTH = 99;
@@ -271,6 +272,7 @@ enum class EventType : EventId {
 	DecawaveUWB = EVENTID_DECAWAVE_UWB,
 	StepDetector = EVENTID_STEP_DETECTOR,
 	HeadingChange = EVENTID_HEADING_CHANGE,
+	FutureShapeSensFloor = EVENTID_FUTURESHAPE_SENSFLOOR,
 	// Special events
 	PedestrianActivity = EVENTID_PEDESTRIAN_ACTIVITY,
 	GroundTruth = EVENTID_GROUND_TRUTH,
@@ -436,6 +438,15 @@ struct StepDetectorEvent {
 struct HeadingChangeEvent : public NumericSensorEventBase<1, double> {
 	double headingChangeRad;
 };
+struct FutureShapeSensFloorEvent {
+	uint16_t roomId;
+	uint8_t x;
+	uint8_t y;
+	std::array<uint8_t, 8> fieldCapacities;
+
+	void parse(const std::string& parameterString);
+	void serializeInto(_internal::ParameterAssembler& stream) const;
+};
 
 
 // #### Special Events ####
@@ -467,7 +478,7 @@ struct FileMetadataEvent {
 using EventData = std::variant<AccelerometerEvent, GravityEvent, LinearAccelerationEvent, GyroscopeEvent, MagneticFieldEvent, PressureEvent,
 OrientationEvent, RotationMatrixEvent, WifiEvent, BLEEvent, RelativeHumidityEvent, OrientationOldEvent, RotationVectorEvent, LightEvent,
 AmbientTemperatureEvent, HeartRateEvent, GPSEvent, WifiRTTEvent, GameRotationVectorEvent, EddystoneUIDEvent, DecawaveUWBEvent, StepDetectorEvent,
-HeadingChangeEvent, PedestrianActivityEvent, GroundTruthEvent, GroundTruthPathEvent, FileMetadataEvent>;
+HeadingChangeEvent, FutureShapeSensFloorEvent, PedestrianActivityEvent, GroundTruthEvent, GroundTruthPathEvent, FileMetadataEvent>;
 
 struct SensorEvent {
 
