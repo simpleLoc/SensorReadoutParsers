@@ -83,6 +83,7 @@ end
 hold off;
 
 figure('name', 'FTM measurement count per device');
+hold on;
 ftmMeasurementCnts = [];
 for(rangingId = [1:length(rangingMacs)])
 	rangingMac = rangingMacs{rangingId};
@@ -90,10 +91,8 @@ for(rangingId = [1:length(rangingMacs)])
 	measurementCnt = sum(macIdcs);
 	ftmMeasurementCnts = [ftmMeasurementCnts, measurementCnt];
 end
-hold on;
 barh([1:length(rangingMacs)], ftmMeasurementCnts);
 for(rangingId = [1:length(rangingMacs)])
 	text(0.05 * max(ftmMeasurementCnts), rangingId, rangingMacs{rangingId});
 end
 hold off;
-
