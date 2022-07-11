@@ -214,7 +214,7 @@ classdef SensorReadoutParser < handle
 				errorCnt = errorCnt + 1;
 				printf('ERR(l: %d) Timestamp not monotonically increased from previous event.\n', errEvtIdx);
 			end
-			if(any(tsErrors) != 0)
+			if(any(tsErrors))
 				plot(sortedTimestampDistances);
 				hold on;
 				plot(unsortedTimestampDistances);
@@ -224,12 +224,13 @@ classdef SensorReadoutParser < handle
 
 			% Validate Amount of parameters for each event
 			baseSensorAccess = SensorType.isBaseSensor(self.evtIds);
-			baseSensorIdcs = [1:rows(self.evtIds)](baseSensorAccess);
+			baseSensorIdcs = [1:rows(self.evtIds)];
+            baseSensorIdcs = baseSensorIdcs(baseSensorAccess);
 			actualArgCnts = strfind(self.rawInputData{3}(baseSensorAccess), ';');
 			actualArgCnts = cellfun(@(s) length(s), actualArgCnts)';
 			shouldArgCnts = SensorType.getSensorEventArgumentCnt(self.evtIds(baseSensorAccess));
 			argCntErrors = (actualArgCnts == shouldArgCnts);
-			for(argCntErrIdx = find(argCntErrors))
+			for argCntErrIdx = find(argCntErrors)
 				errorCnt = errorCnt + 1;
 				evtIdx = baseSensorIdcs(argCntErrIdx);
 				printf('ERR(l: %d): Wrong argument-count for eventType %d. Should be: %d, but was: %d\n', evtIdx, self.evtIds(evtIdx), shouldArgCnts(evtIdx), actualArgCnts(evtIdx));

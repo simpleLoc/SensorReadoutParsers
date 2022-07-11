@@ -15,6 +15,7 @@ printf('Generating Recording Statistics: %s\n', fileName);
 % # Parse & Generate Statistics
 % #########################################################################
 parser = SensorReadoutParser(fileName, true);
+recTimestamps = parser.getTimestamps();
 
 % #########################################################################
 % # Generate Base Statistics
@@ -51,13 +52,32 @@ btTimestamps = [btAdvertisements{:,1}];
 wifiTimestamps = [wifiAdvertisements{:,1}];
 ftmTimestamps = [ftmMeasurements{:,1}];
 
+fprintf('=== Recording Statistics ===\n');
+recDuration = (recTimestamps(end) - recTimestamps(1));
+fprintf('\tDuration: %.3fs\n', recDuration);
+
 fprintf('=== Radio Statistics ===\n');
-btPerSec = length(btTimestamps) / (max(btTimestamps) - min(btTimestamps));
-printf('\tBLE events: %f/s\n', btPerSec);
-wifiPerSec = length(wifiTimestamps) / (max(wifiTimestamps) - min(wifiTimestamps));
-printf('\tWifi events: %f/s\n', wifiPerSec);
-ftmPerSec = length(ftmTimestamps) / (max(ftmTimestamps) - min(ftmTimestamps));
-printf('\tFTM events: %f/s\n', ftmPerSec);
+% BLUETOOTH
+if(~isempty(btTimestamps))
+	btPerSec = length(btTimestamps) / (max(btTimestamps) - min(btTimestamps));
+	printf('\tBLE events: %d (=%f/s)\n', length(btTimestamps), btPerSec);
+else
+	printf('\tNo BLE events\n');
+end
+% WIFI
+if(~isempty(wifiTimestamps))
+	wifiPerSec = length(wifiTimestamps) / (max(wifiTimestamps) - min(wifiTimestamps));
+	printf('\tWifi events: %d (=%f/s)\n', length(wifiTimestamps), wifiPerSec);
+else
+	printf('\tNo Wifi events\n');
+end
+% FTM
+if(~isempty(ftmTimestamps))
+	ftmPerSec = length(ftmTimestamps) / (max(ftmTimestamps) - min(ftmTimestamps));
+printf('\tFTM events: %d (=%f/s)\n', length(ftmTimestamps), ftmPerSec);
+else
+	printf('\tNo FTM events\n');
+end
 
 fprintf('=== FTM Statistics ===\n');
 printf('\tAvg. distance: %.2f mm\n', mean([ftmMeasurements{:,4}]));
