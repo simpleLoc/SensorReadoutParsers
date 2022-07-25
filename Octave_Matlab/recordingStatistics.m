@@ -2,6 +2,7 @@ clear all;
 close all;
 loadSensorReadoutParser('src/');
 GRID_WIDTH = 4;
+STATISTIC_WINDOW_SIZE_SEC = 30;
 
 % #########################################################################
 % # Select File
@@ -60,21 +61,30 @@ fprintf('=== Radio Statistics ===\n');
 % BLUETOOTH
 if(~isempty(btTimestamps))
 	btPerSec = length(btTimestamps) / (max(btTimestamps) - min(btTimestamps));
-	printf('\tBLE events: %d (=%f/s)\n', length(btTimestamps), btPerSec);
+	printf('\tBLE events: %d\n', length(btTimestamps));
+	printf('\t  Timeframe: [%.2fs : %.2fs]\n', min(btTimestamps), max(btTimestamps));
+	printf('\t  Samplerate: %.2f/s\n', btPerSec);
 else
 	printf('\tNo BLE events\n');
 end
 % WIFI
 if(~isempty(wifiTimestamps))
 	wifiPerSec = length(wifiTimestamps) / (max(wifiTimestamps) - min(wifiTimestamps));
-	printf('\tWifi events: %d (=%f/s)\n', length(wifiTimestamps), wifiPerSec);
+	printf('\tWifi events: %d\n', length(wifiTimestamps));
+	printf('\t  Timeframe: [%.2fs : %.2fs]\n', min(wifiTimestamps), max(wifiTimestamps));
+	printf('\t  Samplerate: %.2f/s\n', wifiPerSec);
 else
 	printf('\tNo Wifi events\n');
 end
 % FTM
 if(~isempty(ftmTimestamps))
 	ftmPerSec = length(ftmTimestamps) / (max(ftmTimestamps) - min(ftmTimestamps));
-printf('\tFTM events: %d (=%f/s)\n', length(ftmTimestamps), ftmPerSec);
+	validSuccessIdcs = ([ftmMeasurements{:,8}] > 0 & [ftmMeasurements{:,7}] > 0);
+	ftmAvgSuccessRate = mean(double([ftmMeasurements{validSuccessIdcs,8}]) ./ double([ftmMeasurements{validSuccessIdcs,7}])) * 100;
+	printf('\tFTM events: %d\n', length(ftmTimestamps));
+	printf('\t  Timeframe: [%.2fs : %.2fs]\n', min(ftmTimestamps), max(ftmTimestamps));
+	printf('\t  Samplerate: %.2f/s\n', ftmPerSec);
+	printf('\t  Avg Success: %.2f%%\n', ftmAvgSuccessRate);
 else
 	printf('\tNo FTM events\n');
 end
@@ -83,7 +93,8 @@ fprintf('=== FTM Statistics ===\n');
 printf('\tAvg. distance: %.2f mm\n', mean([ftmMeasurements{:,4}]));
 printf('\tStddev. distance: %.2f mm\n', std([ftmMeasurements{:,4}]));
 figure('name', 'Measured FTM Distance distribution');
-hist([ftmMeasurements{:,4}]);
+span = (max([ftmMeasurements{:,4}]) - min([ftmMeasurements{:,4}])) / 1000;
+hist([ftmMeasurements{:,4}], ceil(span));
 
 figure('name', 'Measured FTM Distance distributions by device');
 hold on;
@@ -116,3 +127,24 @@ for(rangingId = [1:length(rangingMacs)])
 	text(0.05 * max(ftmMeasurementCnts), rangingId, rangingMacs{rangingId});
 end
 hold off;
+
+figure('name', sprintf('FTM behavior over time (%.2fs windows)', STATISTIC_WINDOW_SIZE_SEC));
+windowCnt = recDuration / STATISTIC_WINDOW_SIZE_SEC;
+windowStarts = [1:windowCnt] * STATISTIC_WINDOW_SIZE_SEC;
+fotRangeStdDev = [];
+fotMeasPerSec = [];
+for wIdx = 1:windowCnt
+	wStart = (wIdx - 1) * STATISTIC_WINDOW_SIZE_SEC;
+	wEnd = wStart + STATISTIC_WINDOW_SIZE_SEC;
+	windowMeasIdcs = (ftmTimestamps >= wStart & ftmTimestamps <= wEnd);
+	windowMeasurements = ftmMeasurements(windowMeasIdcs, :);
+	% calculate statistics
+	%% stddev in window
+	fotRangeStdDev(end + 1) = std([windowMeasurements{:, 4}]);
+	%% samplerate in window
+	fotMeasPerSec(end + 1) = rows(windowMeasurements) / STATISTIC_WINDOW_SIZE_SEC;
+end
+subplot(2, 1, 1);
+plot(windowStarts, fotRangeStdDev); title('Range Standard Deviation');
+subplot(2, 1, 2);
+plot(windowStarts, fotMeasPerSec); title('Measurements /s');
