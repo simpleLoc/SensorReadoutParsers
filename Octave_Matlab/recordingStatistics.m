@@ -62,8 +62,8 @@ fprintf('=== Radio Statistics ===\n');
 if(~isempty(btTimestamps))
 	btPerSec = length(btTimestamps) / (max(btTimestamps) - min(btTimestamps));
 	printf('\tBLE events: %d\n', length(btTimestamps));
-	printf('\t  Timeframe: [%.2fs : %.2fs]\n', min(btTimestamps), max(btTimestamps));
-	printf('\t  Samplerate: %.2f/s\n', btPerSec);
+	printf('\t- Timeframe: [%.2fs : %.2fs]\n', min(btTimestamps), max(btTimestamps));
+	printf('\t- Samplerate: %.2f/s\n', btPerSec);
 else
 	printf('\tNo BLE events\n');
 end
@@ -71,8 +71,8 @@ end
 if(~isempty(wifiTimestamps))
 	wifiPerSec = length(wifiTimestamps) / (max(wifiTimestamps) - min(wifiTimestamps));
 	printf('\tWifi events: %d\n', length(wifiTimestamps));
-	printf('\t  Timeframe: [%.2fs : %.2fs]\n', min(wifiTimestamps), max(wifiTimestamps));
-	printf('\t  Samplerate: %.2f/s\n', wifiPerSec);
+	printf('\t- Timeframe: [%.2fs : %.2fs]\n', min(wifiTimestamps), max(wifiTimestamps));
+	printf('\t- Samplerate: %.2f/s\n', wifiPerSec);
 else
 	printf('\tNo Wifi events\n');
 end
@@ -82,16 +82,16 @@ if(~isempty(ftmTimestamps))
 	validSuccessIdcs = ([ftmMeasurements{:,8}] > 0 & [ftmMeasurements{:,7}] > 0);
 	ftmAvgSuccessRate = mean(double([ftmMeasurements{validSuccessIdcs,8}]) ./ double([ftmMeasurements{validSuccessIdcs,7}])) * 100;
 	printf('\tFTM events: %d\n', length(ftmTimestamps));
-	printf('\t  Timeframe: [%.2fs : %.2fs]\n', min(ftmTimestamps), max(ftmTimestamps));
-	printf('\t  Samplerate: %.2f/s\n', ftmPerSec);
-	printf('\t  Avg Success: %.2f%%\n', ftmAvgSuccessRate);
+	printf('\t- Timeframe: [%.2fs : %.2fs]\n', min(ftmTimestamps), max(ftmTimestamps));
+	printf('\t- Samplerate: %.2f/s\n', ftmPerSec);
+	printf('\t- Avg Success: %.2f%%\n', ftmAvgSuccessRate);
+	printf('\t- Avg. distance: %.2fmm\n', mean([ftmMeasurements{:,4}]));
+	printf('\t- Range INTER-Burst Stddev: %.2fmm\n', std([ftmMeasurements{:,4}]));
+	printf('\t- Avg. Range INTRA-Burst Stddev: %.2fmm\n', mean([ftmMeasurements{:,5}]));
 else
 	printf('\tNo FTM events\n');
 end
 
-fprintf('=== FTM Statistics ===\n');
-printf('\tAvg. distance: %.2f mm\n', mean([ftmMeasurements{:,4}]));
-printf('\tStddev. distance: %.2f mm\n', std([ftmMeasurements{:,4}]));
 figure('name', 'Measured FTM Distance distribution');
 span = (max([ftmMeasurements{:,4}]) - min([ftmMeasurements{:,4}])) / 1000;
 hist([ftmMeasurements{:,4}], ceil(span));
