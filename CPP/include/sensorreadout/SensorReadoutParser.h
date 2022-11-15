@@ -548,9 +548,12 @@ private: // Serializer state
 
 public:
 	Serializer(std::ostream& stream, FileVersion fileVersion = FileVersion::V1);
+	~Serializer();
 
 	void write(const RawSensorEvent& sensorEvent);
 	void write(const SensorEvent& sensorEvent);
+
+	void flush();
 
 };
 

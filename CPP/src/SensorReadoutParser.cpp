@@ -467,11 +467,15 @@ AggregatingParser::AggregatedRawParseResult AggregatingParser::parseRaw() {
 
 Serializer::Serializer(std::ostream& stream, FileVersion fileVersion) : stream(stream), fileVersion(fileVersion) {}
 
+Serializer::~Serializer() {
+	flush();
+}
+
 void Serializer::write(const RawSensorEvent& sensorEvent) {
 	auto timestamp = (fileVersion == FileVersion::V0) ? (sensorEvent.timestamp / 1000000) : sensorEvent.timestamp;
-	stream << timestamp << ";";
-	stream << sensorEvent.eventId << ";";
-	stream << sensorEvent.parameterString << std::endl;
+	stream << timestamp << ';';
+	stream << sensorEvent.eventId << ';';
+	stream << sensorEvent.parameterString << '\n';
 	exceptAssert(stream.good(), "I/O error");
 }
 
@@ -479,6 +483,11 @@ void Serializer::write(const SensorEvent& sensorEvent) {
 	RawSensorEvent rawEvt;
 	sensorEvent.serializeInto(rawEvt);
 	write(rawEvt);
+}
+
+void Serializer::flush() {
+	exceptAssert(stream.good(), "I/O error");
+	stream.flush();
 }
 
 }
