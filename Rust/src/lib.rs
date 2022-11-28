@@ -47,7 +47,8 @@ pub enum EventType {
 	PedestrianActivity = 50,
 	GroundTruth = 99,
 	GroundTruthPath = -1,
-	FileMetadata = -2
+	FileMetadata = -2,
+	RecordingId = -3
 }
 
 #[derive(Debug, Clone)]
@@ -80,6 +81,19 @@ impl SensorEventData {
 			},
 			_ => unreachable!()
 		})
+	}
+	pub fn serialize<W: Write>(&self, out: &mut W) -> io::Result<()> {
+		match self {
+			SensorEventData::FileMetadata { date, person, comment } => {
+				out.write_fmt(format_args!("{};{};{}", date.to_rfc3339(), person, comment))?;
+			},
+		}
+		Ok(())
+	}
+	pub fn serialize_to_string(&self) -> io::Result<String> {
+		let mut result = Vec::new();
+		self.serialize(&mut result)?;
+		Ok(String::from_utf8(result).unwrap())
 	}
 }
 
@@ -123,7 +137,7 @@ impl<R: Read> VisitingParser<R> {
 				let event_id = parts[1].parse::<i64>()
 					.map_err(|_| SensorReadoutParserError::FileFormatError("EventId could not be parsed".to_owned()))?;
 				FromPrimitive::from_i64(event_id)
-					.ok_or(SensorReadoutParserError::FileFormatError("Encountered unknown EventType".to_owned()))?
+					.ok_or(SensorReadoutParserError::FileFormatError(format!("Encountered unknown EventType: {}", event_id)))?
 			},
 			parameter_str: parts[2].trim_end().to_owned()
 		}))
