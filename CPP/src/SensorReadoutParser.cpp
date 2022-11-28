@@ -248,6 +248,18 @@ void FutureShapeSensFloorEvent::serializeInto(_internal::ParameterAssembler& str
 	}
 }
 
+void MicrophoneMetadataEvent::parse(const std::string& parameterString) {
+	Tokenizer<';'> tokenizer(parameterString);
+	channelCnt = tokenizer.nextAs<size_t>();
+	sampleRateHz = tokenizer.nextAs<size_t>();
+	sampleFormat = tokenizer.next();
+}
+void MicrophoneMetadataEvent::serializeInto(_internal::ParameterAssembler& stream) const {
+	stream.push(channelCnt);
+	stream.push(sampleRateHz);
+	stream.push(sampleFormat);
+}
+
 void DecawaveUWBEvent::parse(const std::string& parameterString) {
 	Tokenizer<';'> tokenizer(parameterString);
 	// packet header (estimated position + quality)
@@ -349,6 +361,7 @@ SensorEvent SensorEvent::parse(const RawSensorEvent& rawEvent) {
 		SENSOR_EVENT_PARSE_CASE(EventType::StepDetector, StepDetectorEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::HeadingChange, HeadingChangeEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::FutureShapeSensFloor, FutureShapeSensFloorEvent)
+		SENSOR_EVENT_PARSE_CASE(EventType::MicrophoneMetadata, MicrophoneMetadataEvent)
 		// Special events
 		SENSOR_EVENT_PARSE_CASE(EventType::PedestrianActivity, PedestrianActivityEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::GroundTruth, GroundTruthEvent)
@@ -397,6 +410,7 @@ void SensorEvent::serializeInto(RawSensorEvent& rawEvent) const {
 		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::StepDetector, StepDetectorEvent)
 		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::HeadingChange, HeadingChangeEvent)
 		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::FutureShapeSensFloor, FutureShapeSensFloorEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::MicrophoneMetadata, MicrophoneMetadataEvent)
 		// Special events
 		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::PedestrianActivity, PedestrianActivityEvent)
 		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::GroundTruth, GroundTruthEvent)
