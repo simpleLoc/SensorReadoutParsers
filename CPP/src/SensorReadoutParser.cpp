@@ -305,6 +305,13 @@ void FileMetadataEvent::serializeInto(_internal::ParameterAssembler& stream) con
 	stream.push(comment);
 }
 
+void RecordingIdEvent::parse(const std::string& parameterString) {
+	recordingId = UUID::fromString(parameterString);
+}
+void RecordingIdEvent::serializeInto(_internal::ParameterAssembler& stream) const {
+	stream.push(recordingId.toString());
+}
+
 SensorEvent SensorEvent::parse(const RawSensorEvent& rawEvent) {
 	#define SENSOR_EVENT_PARSE_CASE(EvtType, EvtStruct) \
 		case EvtType: { \
@@ -347,6 +354,7 @@ SensorEvent SensorEvent::parse(const RawSensorEvent& rawEvent) {
 		SENSOR_EVENT_PARSE_CASE(EventType::GroundTruth, GroundTruthEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::GroundTruthPath, GroundTruthPathEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::FileMetadata, FileMetadataEvent)
+		SENSOR_EVENT_PARSE_CASE(EventType::RecordingId, RecordingIdEvent)
 		default: {
 			throw std::runtime_error("Attempted to parse unknown event type.");
 		}
@@ -394,6 +402,7 @@ void SensorEvent::serializeInto(RawSensorEvent& rawEvent) const {
 		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::GroundTruth, GroundTruthEvent)
 		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::GroundTruthPath, GroundTruthPathEvent)
 		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::FileMetadata, FileMetadataEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::RecordingId, RecordingIdEvent)
 	}
 	rawEvent.parameterString = parameterStream.str();
 }
