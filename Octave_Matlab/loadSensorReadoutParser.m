@@ -5,4 +5,5 @@ function loadSensorReadoutParser(srpBasepath)
 	else
 		addpath([srpBasepath, 'compat/matlab']);
 	end
+	addpath([srpBasepath, 'virtualSensors']);
 end
