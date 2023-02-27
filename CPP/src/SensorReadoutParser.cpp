@@ -43,6 +43,13 @@ namespace _internal {
 			return MacAddress::fromColonDelimitedString(str);
 		}
 	}
+
+	std::string ParameterAssembler::str() const { return stream.str(); }
+	// override for uint8_t because retarded c++ default stream outputs this
+	// as character instead of as number
+	template<> void ParameterAssembler::push<uint8_t>(uint8_t value) {
+		push<uint32_t>(value);
+	}
 }
 
 
@@ -282,13 +289,13 @@ void DecawaveUWBEvent::parse(const std::string& parameterString) {
 	}
 }
 void DecawaveUWBEvent::serializeInto(_internal::ParameterAssembler& stream) const {
-	stream.push(x);
-	stream.push(y);
-	stream.push(z);
+	stream.push(x * 1000.0); // m to mm
+	stream.push(y * 1000.0); // m to mm
+	stream.push(z * 1000.0); // m to mm
 	stream.push(qualityFactor);
 	for(const auto& anchorMeasurement : anchorMeasurements) {
 		stream.push(anchorMeasurement.nodeId);
-		stream.push(anchorMeasurement.distance);
+		stream.push(anchorMeasurement.distance * 1000.0); // m to mm
 		stream.push(anchorMeasurement.qualityFactor);
 	}
 }

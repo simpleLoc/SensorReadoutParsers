@@ -66,18 +66,19 @@ void parseSerializeEqualityFile(const std::string& filePath) {
 	BOOST_REQUIRE(inputFile.is_open());
 	std::string outputFileName = filePath + "_out";
 	std::filesystem::remove(outputFileName);
-	std::fstream outputFile;
-	outputFile.open(outputFileName, std::ios::out);
-	BOOST_REQUIRE(outputFile.is_open());
 
-	{ // parse raw and serialize back
+	{ // parse and serialize back
 		AggregatingParser parser(inputFile);
 		auto inputResult = parser.parse();
 		// first serializer run
+		std::ofstream outputFile(outputFileName);
+		BOOST_REQUIRE(outputFile.is_open());
 		Serializer serializer(outputFile);
 		std::for_each(inputResult.begin(), inputResult.end(), [&](const auto& evt){ serializer.write(evt); });
 	}
 	{ // parse generated output file, and test based on that
+		std::ifstream outputFile(outputFileName);
+		BOOST_REQUIRE(outputFile.is_open());
 		AggregatingParser parser(outputFile);
 		auto inputResult = parser.parseRaw();
 

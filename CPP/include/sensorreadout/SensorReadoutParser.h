@@ -206,7 +206,7 @@ namespace _internal {
 			stream << value;
 		}
 
-		std::string str() const { return stream.str(); }
+		std::string str() const;
 	};
 
 }
