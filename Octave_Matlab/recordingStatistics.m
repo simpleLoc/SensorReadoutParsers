@@ -52,7 +52,7 @@ end
 btTimestamps = [btAdvertisements{:,1}]; btRssiValues = [btAdvertisements{:,3}];
 wifiTimestamps = [wifiAdvertisements{:,1}];
 ftmTimestamps = [ftmMeasurements{:,1}];
-uwbMeasurements = [uwbMeasurements{:,1}];
+uwbTimestamps = [uwbMeasurements{:,1}];
 
 fprintf('=== Recording Statistics ===\n');
 recDuration = (recTimestamps(end) - recTimestamps(1));
@@ -109,6 +109,25 @@ end
 
 
 # Plots
+figure('name', 'Time-Differences between consecutive events');
+sensorTimestampDistances = {...
+	'ALL', recTimestamps;...
+	'BLE', btTimestamps;...
+	'WIFI', wifiTimestamps;...
+	'FTM', ftmTimestamps;...
+	'UWB', uwbTimestamps;...
+};
+for(i = 1:rows(sensorTimestampDistances))
+	subplot(rows(sensorTimestampDistances), 1, i);
+	sensorTimestamps = sensorTimestampDistances{i, 2};
+	if(~isempty(sensorTimestamps))
+		plot(sensorTimestamps(2:end), diff(sensorTimestamps));
+	end
+	title(sensorTimestampDistances{i,1});
+	xlim([0, recTimestamps(end)]);
+end
+
+
 if(hasBLE)
 	BIN_DURATION = 5;
 	figure('name', sprintf('BLE measurement count over time [BIN_DURATION = %f sec]', BIN_DURATION));
