@@ -127,6 +127,32 @@ for(i = 1:rows(sensorTimestampDistances))
 	xlim([0, recTimestamps(end)]);
 end
 
+figure('name', 'Heading History');
+if timestampedSensorData.hasSensorId(SensorType.HEADING_CHANGE)
+	HEADING_CHANGE_HISTORY_RESOLUTION = 0.5; %sec (interval accumulating plot)
+	[hcTimestamps, hcData] = timestampedSensorData.getChannel(SensorType.HEADING_CHANGE);
+	% first measurement broken
+	hcTimestamps = hcTimestamps(2:end);
+	hcData = hcData(2:end);
+
+	subplot(3, 1, 1);
+	plot(hcTimestamps, hcData);
+	xlim([hcTimestamps(1), hcTimestamps(end)]);
+	title('Heading changes(raw)');
+	subplot(3, 1, 2);
+	hcSeconds = [floor(hcTimestamps(1)):HEADING_CHANGE_HISTORY_RESOLUTION:ceil(hcTimestamps(end)) - 1];
+	hcSeconds = [hcSeconds; hcSeconds+1];
+	accumIdcs = (hcTimestamps >= hcSeconds(1,:)) & (hcTimestamps < hcSeconds(2,:));
+	accumIdcs = mat2cell(accumIdcs', repmat(1, columns(accumIdcs), 1));
+	accumSecs = cellfun(@(idcsRow) sum(hcData(idcsRow)), accumIdcs);
+	bar(hcSeconds(1,:), rad2deg(accumSecs));
+	title('Heading changes (accumulated per second) [°]');
+	xlim([hcTimestamps(1), hcTimestamps(end)]);
+	subplot(3, 1, 3);
+	plot(hcTimestamps, rad2deg(cumsum(hcData)));
+	xlim([hcTimestamps(1), hcTimestamps(end)]);
+	title('Absolute Heading history [°]');
+end
 
 if(hasBLE)
 	BIN_DURATION = 5;
