@@ -267,7 +267,7 @@ class _FileReader:
         self.lineNumber = 0
 
     def __enter__(self):
-        self.fd = self.filename.open('rt')
+        self.fd = self.filename.open('rt', encoding="utf-8", newline='\n')
         return self
 
     def __exit__(self, type, value, traceback):
