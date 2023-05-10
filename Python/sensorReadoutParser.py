@@ -449,7 +449,7 @@ class SensorReadoutParser:
             uwbDists = []
             i = len(schema.columns)
             while i < len(parts):
-                nodeId = pd.to_numeric(parts[i + 0])
+                nodeId = int(parts[i + 0])
                 distInMM = int(parts[i + 1])
                 quality = int(parts[i + 2])
                 uwbDists.append([event_index, nodeId, distInMM, quality])
