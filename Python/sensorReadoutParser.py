@@ -37,6 +37,7 @@ class SensorEventId(Enum):
     GROUND_TRUTH = 99
     GROUND_TRUTH_PATH = -1
     FILE_METADATA = -2
+    RECORDING_ID = -3
 
 
 @unique
@@ -210,6 +211,11 @@ class SensorReadoutSchema:
                 'date': pa.Column(str),
                 'person': pa.Column(str),
                 'comment': pa.Column(str),
+            }),
+            SensorEventId.RECORDING_ID: pa.DataFrameSchema({
+                'eventIdx': pa.Column(int),
+                'timestamp': pa.Column(int),
+                'recordingId': pa.Column(str),
             }),
         }
 
