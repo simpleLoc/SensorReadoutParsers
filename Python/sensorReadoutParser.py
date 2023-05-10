@@ -1,4 +1,5 @@
 import typing
+
 from pathlib import Path
 from enum import Enum, unique
 
@@ -260,6 +261,32 @@ class SensorReadoutData:
         return self.sensorData[SensorEventId.DECAWAVE_UWB]
 
 
+class _FileReader:
+    def __init__(self, filename: Path):
+        self.filename = filename
+        self.lineNumber = 0
+
+    def __enter__(self):
+        self.fd = self.filename.open('rt')
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.fd.close()
+
+    def readline(self) -> str:
+        self.lineNumber += 1
+        return self.fd.readline()
+
+    def readEmptyLine(self):
+        line = self.readline()
+        assert line == '\n', f'Expected empty line at {self.lineNumber-1}'
+
+    def lookahead(self) -> str:
+        result = self.fd.read(1)
+        self.fd.seek(self.fd.tell()-1)
+        return result
+
+
 class SensorReadoutParser:
     inputFilename: Path
 
@@ -273,7 +300,7 @@ class SensorReadoutParser:
     def parse_radio(self) -> SensorReadoutData:
         return self.parse([SensorEventId.WIFI, SensorEventId.WIFIRTT, SensorEventId.BLE, SensorEventId.DECAWAVE_UWB])
 
-    def parse(self, activeSensors: typing.List[SensorEventId] = None) -> SensorReadoutData:
+    def parse(self, activeSensors: typing.List[SensorEventId] = None) -> SensorReadoutData | typing.Dict[str, SensorReadoutData]:
         assert self.inputFilename.exists(), f'Input file "{str(self.inputFilename)}" not found'
         assert self.inputFilename.is_file(), f'Input path "{str(self.inputFilename)}" is not a file'
 
@@ -290,6 +317,43 @@ class SensorReadoutParser:
         # only use sensorLookup from here
         del activeSensors
 
+        result = {}
+
+        with _FileReader(self.inputFilename) as file:
+            while True:
+                fpName = ''
+                lookahead = file.lookahead()
+
+                if lookahead == '':
+                    break  # EOF
+                elif lookahead == '[':
+                    lineStr = file.readline().strip()
+                    assert lineStr == '[fingerprint:point]', f'Unknown fingerprint header "{lineStr}" at line {file.lineNumber}.'
+
+                    lineStr = file.readline().strip()
+                    assert lineStr.startswith('name='), f'Unexpected text after fingerprint header at line {file.lineNumber}.'
+
+                    fpName = lineStr[len('name='):]
+
+                    assert fpName not in result, f'Duplicated fingerprint name {fpName}'
+
+                    print(fpName)
+
+                    # skip empty line
+                    file.readEmptyLine()
+
+
+                data = self.__process_data(file, sensorLookup)
+                result[fpName] = data
+
+        if len(result) == 1 and '' in result:
+            return result['']  # single SensorReadout file
+        else:
+            return result  # named fingerprint file
+
+
+
+    def __process_data(self, file: _FileReader, sensorLookup: typing.Set[SensorEventId]) -> SensorReadoutData:
         orderedEvents = []
         uwbDistances = []
 
@@ -297,32 +361,40 @@ class SensorReadoutParser:
         for supportedSensor in self.schema.sensors.keys():
             rawEvents[supportedSensor] = []
 
+        eventIndex = -1
+
         # read file
-        with self.inputFilename.open() as file:
-            for index, lineStr in enumerate(file):
-                # Split line
-                parts = lineStr.split(';')
-                if len(parts) < 2:
-                    raise Exception(f'Invalid syntax at line {index}!')
+        while lineStr := file.readline():
+            eventIndex += 1
 
-                timestamp = int(parts[0])
-                eventId = SensorEventId(int(parts[1]))
+            lineStr = lineStr.strip()
 
-                # Check if sensor is known by the parser and if it is activated by the user
-                if eventId not in sensorLookup:
-                    continue
+            if lineStr == '':
+                break
 
-                # Process sensor specific data
-                (sensorData, uwbDists) = self.__process_line(index, eventId, parts)
+            # Split line
+            parts = lineStr.split(';')
+            if len(parts) < 2:
+                raise Exception(f'Invalid syntax at line {file.lineNumber}!')
 
-                eventData = [index, timestamp]
-                eventData.extend(sensorData)
+            timestamp = int(parts[0])
+            eventId = SensorEventId(int(parts[1]))
 
-                rawEvents[eventId].append(eventData)
-                orderedEvents.append([index, timestamp, eventId])
+            # Check if sensor is known by the parser and if it is activated by the user
+            if eventId not in sensorLookup:
+                continue
 
-                if uwbDists is not None:
-                    uwbDistances.extend(uwbDists)
+            # Process sensor specific data
+            (sensorData, uwbDists) = self.__process_line(eventIndex, eventId, parts)
+
+            eventData = [eventIndex, timestamp]
+            eventData.extend(sensorData)
+
+            rawEvents[eventId].append(eventData)
+            orderedEvents.append([eventIndex, timestamp, eventId])
+
+            if uwbDists is not None:
+                uwbDistances.extend(uwbDists)
 
         # Construct DataFrames
         result = SensorReadoutData()
