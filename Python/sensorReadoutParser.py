@@ -293,6 +293,7 @@ class SensorReadoutParser:
     def __init__(self, filename: Path):
         self.inputFilename = Path(filename)
         self.schema = SensorReadoutSchema()
+        self._eventIdLookup = {e.value: e for e in list(SensorEventId)}  # Avoid Enum.__call__ because dict lookup is fast
 
     def is_sensor_supported(self, eventId: SensorEventId):
         return eventId in self.schema.sensors
@@ -378,7 +379,7 @@ class SensorReadoutParser:
                 raise Exception(f'Invalid syntax at line {file.lineNumber}!')
 
             timestamp = int(parts[0])
-            eventId = SensorEventId(int(parts[1]))
+            eventId = self._eventIdLookup[int(parts[1])]  # SensorEventId(int(parts[1])) is much slower than dict lookup
 
             # Check if sensor is known by the parser and if it is activated by the user
             if eventId not in sensorLookup:
