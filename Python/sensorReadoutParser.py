@@ -315,6 +315,8 @@ class SensorReadoutParser:
                 if self.is_sensor_supported(s):
                     sensorLookup.add(s)
 
+        sensorLookup = {e.value for e in sensorLookup}  # convert Enum to int; As lookup is faster for int
+
         # only use sensorLookup from here
         del activeSensors
 
@@ -353,8 +355,7 @@ class SensorReadoutParser:
             return result  # named fingerprint file
 
 
-
-    def __process_data(self, file: _FileReader, sensorLookup: typing.Set[SensorEventId]) -> SensorReadoutData:
+    def __process_data(self, file: _FileReader, sensorLookup: typing.Set[int]) -> SensorReadoutData:
         orderedEvents = []
         uwbDistances = []
 
@@ -379,11 +380,13 @@ class SensorReadoutParser:
                 raise Exception(f'Invalid syntax at line {file.lineNumber}!')
 
             timestamp = int(parts[0])
-            eventId = self._eventIdLookup[int(parts[1])]  # SensorEventId(int(parts[1])) is much slower than dict lookup
+            eventIdInt = int(parts[1])
 
             # Check if sensor is known by the parser and if it is activated by the user
-            if eventId not in sensorLookup:
+            if eventIdInt not in sensorLookup:
                 continue
+
+            eventId = self._eventIdLookup[eventIdInt]  # SensorEventId(int(parts[1])) is much slower than dict lookup
 
             # Process sensor specific data
             (sensorData, uwbDists) = self.__process_line(eventIndex, eventId, parts)
@@ -415,6 +418,7 @@ class SensorReadoutParser:
             result.sensorData[eventId].set_index('eventIdx', inplace=True)
 
         return result
+
 
     def __process_line(self, event_index: int, eventId: SensorEventId, parts: typing.List[str]):
         schema = self.schema.sensors[eventId]
