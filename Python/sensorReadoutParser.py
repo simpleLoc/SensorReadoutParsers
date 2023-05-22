@@ -6,6 +6,9 @@ from enum import Enum, unique
 import pandas as pd
 import pandera as pa
 
+import datetime
+import dateutil
+
 
 @unique
 class SensorEventId(Enum):
@@ -231,6 +234,17 @@ class SensorReadoutSchema:
         })
 
 
+class FileMetadata:
+    def __init__(self, metadata: pd.DataFrame):
+        self.person = metadata.person.iloc[0]
+        self.comment = metadata.comment.iloc[0]
+        self.date = dateutil.parser.parse(metadata.date.iloc[0])
+
+    def absoluteTime(self, tsInNS: int) -> datetime.datetime:
+        delta = datetime.timedelta(microseconds=tsInNS / 1000)
+        return self.date + delta
+
+
 class SensorReadoutData:
     eventsChronologically: pd.DataFrame
     sensorData: typing.Dict[SensorEventId, pd.DataFrame] = {}
@@ -238,6 +252,9 @@ class SensorReadoutData:
 
     def hasDataForSensor(self, sensorEventId: SensorEventId) -> bool:
         return (sensorEventId in self.sensorData) and len(self.sensorData[sensorEventId]) > 0
+
+    def file_metadata(self) -> FileMetadata:
+        return FileMetadata(self.sensorData[SensorEventId.FILE_METADATA])
 
     def gt(self):
         return self.sensorData[SensorEventId.GROUND_TRUTH]
