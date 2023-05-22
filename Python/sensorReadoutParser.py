@@ -248,6 +248,9 @@ class SensorReadoutData:
     def gyro(self):
         return self.sensorData[SensorEventId.GYROSCOPE]
 
+    def magnetic(self):
+        return self.sensorData[SensorEventId.MAGNETIC_FIELD]
+
     def wifi(self):
         return self.sensorData[SensorEventId.WIFI]
 
@@ -298,7 +301,7 @@ class SensorReadoutParser:
     def is_sensor_supported(self, eventId: SensorEventId):
         return eventId in self.schema.sensors
 
-    def parse_radio(self) -> SensorReadoutData:
+    def parse_radio(self) -> SensorReadoutData | typing.Dict[str, SensorReadoutData]:
         return self.parse([SensorEventId.WIFI, SensorEventId.WIFIRTT, SensorEventId.BLE, SensorEventId.DECAWAVE_UWB])
 
     def parse(self, activeSensors: typing.List[SensorEventId] = None) -> SensorReadoutData | typing.Dict[str, SensorReadoutData]:
@@ -340,7 +343,7 @@ class SensorReadoutParser:
 
                     assert fpName not in result, f'Duplicated fingerprint name {fpName}'
 
-                    print(fpName)
+                    #print(fpName)
 
                     # skip empty line
                     file.readEmptyLine()
