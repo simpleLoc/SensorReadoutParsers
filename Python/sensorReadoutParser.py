@@ -246,9 +246,11 @@ class FileMetadata:
 
 
 class SensorReadoutData:
-    eventsChronologically: pd.DataFrame
-    sensorData: typing.Dict[SensorEventId, pd.DataFrame] = {}
-    uwbDistances: pd.DataFrame
+    def __init__(self):
+        self.eventsChronologically: pd.DataFrame
+        self.sensorData: typing.Dict[SensorEventId, pd.DataFrame] = {}
+        self.uwbDistances: pd.DataFrame
+
 
     def hasDataForSensor(self, sensorEventId: SensorEventId) -> bool:
         return (sensorEventId in self.sensorData) and len(self.sensorData[sensorEventId]) > 0
@@ -308,8 +310,6 @@ class _FileReader:
 
 
 class SensorReadoutParser:
-    inputFilename: Path
-
     def __init__(self, filename: Path):
         self.inputFilename = Path(filename)
         self.schema = SensorReadoutSchema()
