@@ -467,6 +467,22 @@ struct PedestrianActivityEvent {
 	PedestrianActivityId rawActivityId;
 	std::string rawActivityName;
 
+	static PedestrianActivityEvent from(PedestrianActivity activity)  {
+		PedestrianActivityEvent result;
+		result.activity = activity;
+		result.rawActivityId = static_cast<PedestrianActivityId>(activity);
+		switch(activity) {
+			case PedestrianActivity::Walking: result.rawActivityName = "WALKING"; break;
+			case PedestrianActivity::Standing: result.rawActivityName = "STANDING"; break;
+			case PedestrianActivity::StairsUp: result.rawActivityName = "STAIRS_UP"; break;
+			case PedestrianActivity::StairsDown: result.rawActivityName = "STAIRS_DOWN"; break;
+			case PedestrianActivity::ElevatorUp: result.rawActivityName = "ELEVATOR_UP"; break;
+			case PedestrianActivity::ElevatorDown: result.rawActivityName = "ELEVATOR_DOWN"; break;
+			case PedestrianActivity::MessAround: result.rawActivityName = "MESS_AROUND"; break;
+		}
+		return result;
+	}
+
 	void parse(const std::string& parameterString);
 	void serializeInto(_internal::ParameterAssembler& stream) const;
 };
