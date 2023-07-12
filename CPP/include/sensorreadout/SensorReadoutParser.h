@@ -589,7 +589,6 @@ public:
 	void write(const SensorEvent& sensorEvent);
 
 	void flush();
-
 };
 
 }
