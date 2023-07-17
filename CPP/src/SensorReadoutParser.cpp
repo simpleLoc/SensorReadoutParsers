@@ -1,6 +1,7 @@
 #include <sensorreadout/SensorReadoutParser.h>
 
 #include <charconv>
+#include <iomanip>
 
 namespace SensorReadoutParser {
 
@@ -53,6 +54,16 @@ namespace _internal {
 	template<> UUID fromStringView<UUID>(const std::string_view& str) {
 		return UUID::fromString(str);
 	}
+	template<> HexString fromStringView<HexString>(const std::string_view& str) {
+		exceptAssert(str.size() % 2 == 0, "Invalid HexString!");
+		HexString result;
+		for (unsigned int i = 0; i < str.length(); i += 2) {
+			std::string byteString = std::string(str.substr(i, 2));
+			char byte = std::strtol(byteString.c_str(), NULL, 16);
+			result.data.push_back(byte);
+		}
+		return result;
+	}
 	template<> MacAddress fromStringView<MacAddress>(const std::string_view& str) {
 		if(str.length() == MacAddress::STRING_LENGTH_SHORT) {
 			return MacAddress::fromString(str);
@@ -82,6 +93,14 @@ static uint8_t parseHexNibble(char hex) {
 		return hex - 'a' + 10;
 	}
 	exceptUnreachable("Invalid hex encountered");
+}
+
+std::ostream& operator<<(std::ostream& output, const HexString& self) {
+	output << std::hex << std::uppercase << std::setfill( '0' );
+	for( uint8_t b : self.data ) {
+		output << std::setw( 2 ) << b;
+	}
+	return output;
 }
 
 UUID UUID::fromString(const std::string_view& uuidStr) {
@@ -200,11 +219,17 @@ void BLEEvent::parse(const std::string& parameterString) {
 	mac = tokenizer.nextAs<MacAddress>();
 	rssi = tokenizer.nextAs<Rssi>();
 	txPower = tokenizer.nextAs<BluetoothTxPower>();
+	if(tokenizer.peekNext()) { // only available on newer files
+		rawData = tokenizer.nextAs<HexString>().data;
+	}
 }
 void BLEEvent::serializeInto(_internal::ParameterAssembler& stream) const {
 	stream.push(mac.toString());
 	stream.push(rssi);
 	stream.push(txPower);
+	if(rawData.size() > 0) {
+		stream.push(HexString { rawData } );
+	}
 }
 
 void WifiRTTEvent::parse(const std::string& parameterString) {

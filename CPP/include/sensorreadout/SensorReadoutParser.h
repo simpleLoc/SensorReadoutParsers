@@ -21,6 +21,14 @@ using Timestamp = uint64_t;
 using EventId = int32_t;
 using PedestrianActivityId = uint32_t;
 
+///
+/// \brief MarkerStruct representing a dynamic-sized string in hex encoding that
+/// should be decoded to a raw byte array.
+///
+struct HexString {
+	std::vector<uint8_t> data;
+};
+
 struct UUID {
 	static constexpr size_t UUID_LENGTH = 16;
 	static constexpr size_t STRING_LENGTH = 16*2 + 4;
@@ -109,6 +117,7 @@ namespace _internal {
 	template<> float fromStringView(const std::string_view&);
 	template<> double fromStringView(const std::string_view&);
 	template<> UUID fromStringView(const std::string_view&);
+	template<> HexString fromStringView(const std::string_view&);
 	template<> MacAddress fromStringView(const std::string_view&);
 
 
@@ -368,6 +377,8 @@ struct BLEEvent {
 	MacAddress mac;
 	Rssi rssi;
 	BluetoothTxPower txPower;
+	/** The entire advertisement packet as raw bytes */
+	std::vector<uint8_t> rawData;
 
 	void parse(const std::string& parameterString);
 	void serializeInto(_internal::ParameterAssembler& stream) const;
