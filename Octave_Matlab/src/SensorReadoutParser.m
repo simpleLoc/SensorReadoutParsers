@@ -134,7 +134,7 @@ classdef SensorReadoutParser < handle
 
 			btIdxs = (self.evtIds == SensorType.IBEACON);
 			rawBtData = self.rawInputData{3}(btIdxs);
-			wifiIdxs = (self.evtIds == SensorType.WIFI);
+			wifiIdxs = find(self.evtIds == SensorType.WIFI);
 			rawWifiData = self.rawInputData{3}(wifiIdxs);
 			ftmIdxs = (self.evtIds == SensorType.WIFIRTT);
 			rawFtmData = self.rawInputData{3}(ftmIdxs);
@@ -144,8 +144,8 @@ classdef SensorReadoutParser < handle
 			% allocate result structures and populate timestamps
 			btAdvertisements = cell(rows(rawBtData), 4);
 			btAdvertisements(:,1) = num2cell(self.timestamps(btIdxs));
-			wifiAdvertisements = cell(rows(rawWifiData), 4);
-			wifiAdvertisements(:,1) = num2cell(self.timestamps(wifiIdxs));
+			wifiAdvertisements = cell(0, 4);
+			%wifiAdvertisements(:,1) = num2cell(self.timestamps(wifiIdxs));
 			% success, mac, distanceMM, stdDevDistance, rssi, numAttemptedMeas, numSuccessfulMeas
 			ftmMeasurements = cell(rows(rawFtmData), 8);
 			ftmMeasurements(:, 1) = num2cell(self.timestamps(ftmIdxs));
@@ -168,7 +168,14 @@ classdef SensorReadoutParser < handle
 			% parse wifi - each wifi line has multiple advertisements, thus we need
 			% the loop here.
 			for i = 1:length(rawWifiData)
-				wifiAdvertisements(i, 2:end) = textscan(rawWifiData{i}, '%s %d %d', 'Delimiter', ';');
+				evtTs = self.timestamps(wifiIdxs(i));
+				wifiAdvsInEvt = textscan(rawWifiData{i}, '%s %d %d', 'Delimiter', ';');
+				for j = 1:length(wifiAdvsInEvt{1})
+					wifiAdvertisements(end+1, 1) = evtTs;
+					wifiAdvertisements(end, 2) = wifiAdvsInEvt{1}{j};
+					wifiAdvertisements(end, 3) = wifiAdvsInEvt{2}(j);
+					wifiAdvertisements(end, 4) = wifiAdvsInEvt{3}(j);
+				end
 			end
 
 			% parse ftm
