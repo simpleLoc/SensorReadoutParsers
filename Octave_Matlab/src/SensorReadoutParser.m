@@ -154,7 +154,14 @@ classdef SensorReadoutParser < handle
 			uwbMeasurements(:,1) = num2cell(self.timestamps(uwbIdxs));
 
 			% parse bluetooth
-			rawBtData = textscan(strjoin(rawBtData, '\n'), '%s %d %d', 'Delimiter', ';');
+			btDelimPattern = '%s %d %d';
+			btHasRawData = false;
+			if(~isempty(rawBtData) && sum(rawBtData{1} == ';') == 3)
+				# file has new data format where ble events contain raw data hex-string appended
+				btHasRawData = true;
+				btDelimPattern = '%s %d %d %s';
+			end
+			rawBtData = textscan(strjoin(rawBtData, '\n'), btDelimPattern, 'Delimiter', ';');
 			btAdvertisements(:, 2) = rawBtData{1};
 			btAdvertisements(:, 3:4) = num2cell([rawBtData{2:3}]);
 

@@ -127,8 +127,8 @@ for(i = 1:rows(sensorTimestampDistances))
 	xlim([0, recTimestamps(end)]);
 end
 
-figure('name', 'Heading History');
-if timestampedSensorData.hasSensorId(SensorType.HEADING_CHANGE)
+if timestampedSensorData.hasSensorId(SensorType.HEADING_CHANGE) && recDuration < 480
+	figure('name', 'Heading History');
 	HEADING_CHANGE_HISTORY_RESOLUTION = 0.5; %sec (interval accumulating plot)
 	[hcTimestamps, hcData] = timestampedSensorData.getChannel(SensorType.HEADING_CHANGE);
 	% first measurement broken
@@ -226,4 +226,9 @@ if(hasFTM)
 	plot(windowStarts, fotRangeStdDev); title('Range Standard Deviation');
 	subplot(2, 1, 2);
 	plot(windowStarts, fotMeasPerSec); title('Measurements /s');
+
+	figure('name', 'Distance <-> Success Correlation');
+	scatter([ftmMeasurements{:,4}], [ftmMeasurements{:,8}]);
+	ylabel('Successfull Measurements');
+	xlabel('Measured Distance');
 end
