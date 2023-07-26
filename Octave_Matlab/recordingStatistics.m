@@ -1,5 +1,5 @@
-clear all;
-close all;
+%clear all;
+%close all;
 loadSensorReadoutParser('src/');
 GRID_WIDTH = 4;
 STATISTIC_WINDOW_SIZE_SEC = 30;
@@ -231,4 +231,66 @@ if(hasFTM)
 	scatter([ftmMeasurements{:,4}], [ftmMeasurements{:,8}]);
 	ylabel('Successfull Measurements');
 	xlabel('Measured Distance');
+end
+
+function plotDistributions(timestamps, macs, measurements, type, recDuration, GRID_WIDTH, STATISTIC_WINDOW_SIZE_SEC)
+	figure('name', ['Measured ', type, ' RSSI distribution']);
+	span = (max([measurements]) - min([measurements]));
+	hist([measurements], ceil(span));
+
+	figure('name', ['Measured ', type, ' RSSI distributions by device']);
+	hold on;
+	rangingMacs = unique(macs);
+	minRSSI = min([measurements]);
+	maxRSSI = max([measurements]);
+
+	gridHeight = ceil(rows(rangingMacs) / GRID_WIDTH);
+	for(rangingId = [1:length(rangingMacs)])
+		rangingMac = rangingMacs{rangingId};
+		macIdcs = strcmp(rangingMac, macs);
+		subplot(gridHeight, GRID_WIDTH, rangingId);
+		hist([measurements(macIdcs)]);
+		xlim([minRSSI, maxRSSI]);
+		title(rangingMac);
+	end
+	hold off;
+
+	figure('name', [type, ' measurement count per device']);
+	hold on;
+	rssiMeasurementCnts = [];
+	for(rangingId = [1:length(rangingMacs)])
+		rangingMac = rangingMacs{rangingId};
+		macIdcs = strcmp(rangingMac, macs);
+		measurementCnt = sum(macIdcs);
+		rssiMeasurementCnts = [rssiMeasurementCnts, measurementCnt];
+	end
+	barh([1:length(rangingMacs)], rssiMeasurementCnts);
+	for(rangingId = [1:length(rangingMacs)])
+		text(0.05 * max(rssiMeasurementCnts), rangingId, rangingMacs{rangingId});
+	end
+	hold off;
+
+	figure('name', sprintf('%s behavior over time (%.2fs windows)', type, STATISTIC_WINDOW_SIZE_SEC));
+	windowCnt = recDuration / STATISTIC_WINDOW_SIZE_SEC;
+	windowStarts = [1:windowCnt] * STATISTIC_WINDOW_SIZE_SEC;
+	fotRangeStdDev = [];
+	fotMeasPerSec = [];
+	for wIdx = 1:windowCnt
+		wStart = (wIdx - 1) * STATISTIC_WINDOW_SIZE_SEC;
+		wEnd = wStart + STATISTIC_WINDOW_SIZE_SEC;
+		windowMeasIdcs = (timestamps >= wStart & timestamps <= wEnd);
+		windowMeasurements = measurements(windowMeasIdcs, :);
+		% calculate statistics
+		%% samplerate in window
+		fotMeasPerSec(end + 1) = rows(windowMeasurements) / STATISTIC_WINDOW_SIZE_SEC;
+	end
+	plot(windowStarts, fotMeasPerSec); title('Measurements /s');
+end
+
+if(hasBLE)
+	plotDistributions(btTimestamps, btAdvertisements(:,2), [btAdvertisements{:,3}]', "BLE", recDuration, GRID_WIDTH, STATISTIC_WINDOW_SIZE_SEC);
+end
+
+if(hasWifi)
+	plotDistributions(wifiTimestamps, wifiAdvertisements(:,2), [wifiAdvertisements{:,4}]', "WIFI", recDuration, GRID_WIDTH, STATISTIC_WINDOW_SIZE_SEC);
 end
