@@ -245,12 +245,46 @@ class FileMetadata:
         return self.date + delta
 
 
+Vec3 = tuple[float, float, float]
+
+
+def parseVec3(string: str):
+    strs = string[1:-2].split(";", maxsplit=3)
+    val = (float(strs[0]), float(strs[1]), float(strs[2]))
+    return val
+
+
+class Fingerprint:
+    def __init__(self, name: str, floor_idx: int, floor_name: str):
+        self.name: str = name
+        self.floor_idx: int = floor_idx
+        self.floor_name: str = floor_name
+
+
+class FingerprintPosition(Fingerprint):
+    def __init__(self, name: str, floor_idx: int, floor_name: str, position: Vec3):
+        super().__init__(name=name, floor_idx=floor_idx, floor_name=floor_name)
+        self.position = position
+
+
+class FingerprintPath(Fingerprint):
+    def __init__(self,
+                 name: str,
+                 floor_idx: int,
+                 floor_name: str,
+                 points: typing.List[str] | None,
+                 positions: typing.List[Vec3] | None):
+        super().__init__(name=name, floor_idx=floor_idx, floor_name=floor_name)
+        self.points = points
+        self.positions = positions
+
+
 class SensorReadoutData:
     def __init__(self):
         self.eventsChronologically: pd.DataFrame
         self.sensorData: typing.Dict[SensorEventId, pd.DataFrame] = {}
         self.uwbDistances: pd.DataFrame
-
+        self.fingerprint: Fingerprint | None = None
 
     def hasDataForSensor(self, sensorEventId: SensorEventId) -> bool:
         return (sensorEventId in self.sensorData) and len(self.sensorData[sensorEventId]) > 0
@@ -344,36 +378,68 @@ class SensorReadoutParser:
 
         with _FileReader(self.inputFilename) as file:
             while True:
-                fpName = ''
+                fp = None
                 lookahead = file.lookahead()
 
                 if lookahead == '':
                     break  # EOF
                 elif lookahead == '[':
                     lineStr = file.readline().strip()
-                    assert lineStr == '[fingerprint:point]', f'Unknown fingerprint header "{lineStr}" at line {file.lineNumber}.'
 
-                    lineStr = file.readline().strip()
-                    assert lineStr.startswith('name='), f'Unexpected text after fingerprint header at line {file.lineNumber}.'
+                    # read header
+                    header_map = self.__parse_header(file)
+                    if lineStr == '[fingerprint:point]':
+                        position_str = header_map.get("position")
+                        position = parseVec3(position_str) if position_str is not None else None
+                        fp = FingerprintPosition(name=header_map["name"],
+                                                 floor_name=header_map.get("floorName"),
+                                                 floor_idx=int(header_map.get("floorIdx", -1)),
+                                                 position=position)
+                    elif lineStr == '[fingerprint:path]':
+                        positions_str = header_map.get("positions")
+                        positions = parseVec3(positions_str) if positions_str is not None else None
+                        fp = FingerprintPath(name=header_map["name"],
+                                             floor_name=header_map.get("floorName"),
+                                             floor_idx=int(header_map.get("floorIdx")),
+                                             points=header_map.get("points"),
+                                             positions=positions)
+                    else:
+                        assert False, f'Unknown fingerprint header "{lineStr}" at line {file.lineNumber}.'
 
-                    fpName = lineStr[len('name='):]
-
-                    assert fpName not in result, f'Duplicated fingerprint name {fpName}'
+                    assert fp.name not in result, f'Duplicated fingerprint name {fp.name}'
 
                     #print(fpName)
 
                     # skip empty line
                     file.readEmptyLine()
 
-
                 data = self.__process_data(file, sensorLookup)
-                result[fpName] = data
+                data.fingerprint = fp
+                if fp:
+                    result[fp.name] = data
+                else:
+                    result[''] = data
 
         if len(result) == 1 and '' in result:
             return result['']  # single SensorReadout file
         else:
             return result  # named fingerprint file
 
+    @staticmethod
+    def __parse_header(file: _FileReader):
+        header_map: typing.Dict[str, str] = {}
+        while True:
+            lookahead = file.lookahead()
+
+            if lookahead == '\n':
+                break  # End of Header
+
+            line = file.readline().strip()
+
+            key, value = line.split("=", maxsplit=1)
+            header_map[key] = value
+
+        return header_map
 
     def __process_data(self, file: _FileReader, sensorLookup: typing.Set[int]) -> SensorReadoutData:
         orderedEvents = []
