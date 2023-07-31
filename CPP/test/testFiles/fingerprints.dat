@@ -1,5 +1,8 @@
 [fingerprint:point]
 name=FP 053
+floorIdx=0
+floorName=floor
+position=(12.600000;0.600000;1.300000)
 
 0;-2;2023-05-09T14:59:46.382Z;Unknown;SensorFingerprintApp: Pixel 2 XL
 0;-3;49f2091a-d869-4608-a227-f4194265a699
@@ -19,6 +22,9 @@ name=FP 053
 [fingerprint:point]
 name=FP 1337
 paramWithEqInName=key=value
+floorIdx=1
+floorName=floorTest
+position=(13.370000;4.200000;2.400000)
 
 0;-2;2023-05-09T14:43:23.738Z;Unknown;SensorFingerprintApp: Pixel 2 XL
 0;-3;d64e055b-30bf-4026-b99b-efb6033b90fe
@@ -37,6 +43,9 @@ paramWithEqInName=key=value
 [fingerprint:point]
 name=FP 099
 additionalParam1=testvalue
+floorIdx=2
+floorName=floor1
+position=(13.370000;4.200000;2.400000)
 
 0;-2;2023-05-09T14:43:23.738Z;Unknown;SensorFingerprintApp: Pixel 2 XL
 0;-3;d64e055b-30bf-4026-b99b-efb6033b90fe
@@ -50,3 +59,26 @@ additionalParam1=testvalue
 54542032;0;-0.16230392;3.2212238;10.043379
 58143106;0;-0.16709518;3.226015;9.976601
 60828653;0;-0.18626022;3.226015;9.909822
+
+[fingerprint:path]
+name=FP 02;FP 07
+floorIdx=1337
+floorName=floor42
+points[]=2
+points[0]=FP 02
+points[1]=FP 07
+positions[]=2
+positions[0]=(11.400001;3.600000;1.300000)
+positions[1]=(8.800000;4.000000;1.300000)
+
+0;-2;2023-07-31T14:39:31.953Z;Unknown;SensorFingerprintApp: Pixel 5
+0;-3;b7878594-fb64-4ec2-85fc-f298ce9d8d11
+13230268;1;0.009785418;0.026378559;9.80996
+17949435;1;0.009785418;0.026378559;9.80996
+22668602;1;0.00973214;0.026161345;9.80996
+27387768;1;0.009678917;0.025944056;9.809961
+36277247;0;0.034097724;-0.0023928226;9.804591
+37434956;1;0.009679037;0.025943896;9.809961
+38636831;0;0.048454657;-0.031106694;9.799805
+40466466;3;-0.0035123718;-0.0;-7.635591E-4
+40996466;0;0.034097724;-0.021535404;9.804591

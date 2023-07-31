@@ -11,7 +11,25 @@
 namespace SensorReadoutParser {
 
 	enum class FingerprintType {
-		Point, Line
+		Point, Path
+	};
+
+	struct ParameterParseHelper {
+		static std::array<double, 3> parseVec3(const std::string& val) {
+			std::array<double, 3> result;
+			exceptAssert(sscanf(val.data(), "(%lf;%lf;%lf)", &result[0], &result[1], &result[2]), "Failed to parse vec3");
+			return result;
+		}
+		template<typename TItem, typename TItemParseFn>
+		static std::vector<TItem> parseArray(const std::unordered_map<std::string, std::string>& parameters, const std::string arrayName, TItemParseFn parseFn) {
+			size_t arrayLen = std::stoul(parameters.at(arrayName + "[]"));
+			std::vector<TItem> result;
+			for(size_t i = 0; i < arrayLen; ++i) {
+				std::string itemStr = parameters.at(arrayName + "[" + std::to_string(i) + "]");
+				result.push_back(parseFn(itemStr));
+			}
+			return result;
+		}
 	};
 
 	struct Fingerprint {
@@ -19,6 +37,22 @@ namespace SensorReadoutParser {
 		std::string name;
 		std::unordered_map<std::string, std::string> parameters;
 		std::vector<SensorEvent> evts;
+
+		size_t getFloorIdx() const { return std::stoul(parameters.at("floorIdx")); }
+		std::string getFloorName() const { return parameters.at("floorName"); }
+
+		// point
+		std::array<double, 3> getPosition() const {
+			return ParameterParseHelper::parseVec3(parameters.at("position"));
+		}
+
+		// path
+		std::vector<std::string> getPointNames() const {
+			return ParameterParseHelper::parseArray<std::string>(parameters, "points", [](const auto& str) { return str; });
+		}
+		std::vector<std::array<double, 3>> getPositions() const {
+			return ParameterParseHelper::parseArray<std::array<double, 3>>(parameters, "positions", &ParameterParseHelper::parseVec3);
+		}
 	};
 
 	class Fingerprints {
@@ -92,7 +126,7 @@ namespace SensorReadoutParser {
 				// parse fingerprint
 				Fingerprint currentFp;
 				if(line == "[fingerprint:point]") { currentFp.fpType = FingerprintType::Point; }
-				else if(line == "[fingerprint:line]") { currentFp.fpType = FingerprintType::Line; }
+				else if(line == "[fingerprint:path]") { currentFp.fpType = FingerprintType::Path; }
 				else { throw std::runtime_error("Encountered unsupported fingerprint type"); }
 
 				while(true) {
