@@ -22,6 +22,9 @@ namespace SensorReadoutParser {
 		std::atomic<bool> shouldExit = false;
 		Callback callback;
 
+		// simulation state
+		std::chrono::steady_clock::time_point simulationStartTime;
+
 	public:
 		LiveSimulator() {}
 		LiveSimulator(const std::vector<SensorEvent>& evts, Callback callback) {
@@ -39,11 +42,11 @@ namespace SensorReadoutParser {
 		void start() {
 			shouldExit.store(false);
 			simulationThread = std::thread([&]() {
-				auto startTime = std::chrono::steady_clock::now();
+				simulationStartTime = std::chrono::steady_clock::now();
 				for(size_t i = 0; i < evts.size(); ++i) {
 					if(shouldExit) { return; }
 					const auto& nextEvt = evts[i];
-					auto nextEvtTime = startTime + std::chrono::nanoseconds(nextEvt.timestamp);
+					auto nextEvtTime = simulationStartTime + std::chrono::nanoseconds(nextEvt.timestamp);
 					std::this_thread::sleep_until(nextEvtTime);
 					callback(nextEvt);
 				}
@@ -51,12 +54,19 @@ namespace SensorReadoutParser {
 		}
 
 		void wait() {
-			simulationThread.join();
+			if(simulationThread.joinable()) {
+				simulationThread.join();
+			}
 		}
 
 		void stop() {
 			shouldExit.store(true);
 			wait();
+		}
+
+		/** amount of nanoseconds that passed since the recording simulation started */
+		Timestamp runningTimeNs() const {
+			return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - simulationStartTime).count();
 		}
 
 	};
