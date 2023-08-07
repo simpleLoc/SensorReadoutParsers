@@ -496,7 +496,7 @@ bool VisitingParser::nextLine(RawSensorEvent& sensorEvent) {
 		sensorEvent.timestamp *= 1000000;
 	}
 	std::string::size_type dIdx2 = line.find(';', dIdx + 1);
-	exceptWhen( // First section empty - no event id
+	exceptWhen( // Second section empty - no event id
 		(dIdx2 == std::string::npos || (dIdx2 - dIdx) < 2),
 		"SensorReadout file corrupted. Empty eventId section.");
 	exceptAssert(

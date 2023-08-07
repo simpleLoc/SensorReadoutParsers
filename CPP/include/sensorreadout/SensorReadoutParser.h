@@ -190,6 +190,10 @@ namespace SensorReadoutParser {
 				ptr = nextSepPtr + 1;
 			}
 
+			void skipRemaining() {
+				ptr = str.length() + 1;
+			}
+
 			std::string_view remainder() {
 				exceptAssert(!isEOS(), "Unexpected EOS");
 				std::string_view result = str.substr(ptr);
