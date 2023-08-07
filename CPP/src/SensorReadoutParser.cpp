@@ -10,74 +10,32 @@ using namespace _internal;
 // ###########
 // # Helpers
 // ######################
-namespace _internal {
-	#define IMPLEMENT_FROM_STRINGVIEW_NUMERIC(NumberType) \
-		template<> NumberType fromStringView(const std::string_view& str) { \
-			NumberType result; \
-			auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.size(), result); \
-			exceptAssert(ec == std::errc(), "Failed to parse token to value"); \
-			return result; \
-		}
+template<> UUID fromStringView<UUID>(const std::string_view& str) {
+	return UUID::fromString(str);
+}
+template<> HexString fromStringView<HexString>(const std::string_view& str) {
+	exceptAssert(str.size() % 2 == 0, "Invalid HexString!");
+	HexString result;
+	for (unsigned int i = 0; i < str.length(); i += 2) {
+		std::string byteString = std::string(str.substr(i, 2));
+		char byte = std::strtol(byteString.c_str(), NULL, 16);
+		result.data.push_back(byte);
+	}
+	return result;
+}
+template<> MacAddress fromStringView<MacAddress>(const std::string_view& str) {
+	if(str.length() == MacAddress::STRING_LENGTH_SHORT) {
+		return MacAddress::fromString(str);
+	} else {
+		return MacAddress::fromColonDelimitedString(str);
+	}
+}
 
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint8_t);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int8_t);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint16_t);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int16_t);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint32_t);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int32_t);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(uint64_t);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(int64_t);
-#ifndef ANDROID
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(float);
-	IMPLEMENT_FROM_STRINGVIEW_NUMERIC(double);
-#else // NDK26 will have from_chars, everything before... is missing from_chars<float> and from_chars<double>
-	template<> float fromStringView(const std::string_view& strView) {
-		float result; size_t endIdx = 0;
-		std::string str{strView};
-		result = std::stof(str, &endIdx);
-		exceptAssert(endIdx == strView.size(), "Failed to parse token to float");
-		return result;
-	}
-	template<> double fromStringView(const std::string_view& strView) {
-		double result; size_t endIdx = 0;
-		std::string str{strView};
-		result = std::stod(str, &endIdx);
-		exceptAssert(endIdx == strView.size(), "Failed to parse token to float");
-		return result;
-	}
-#endif
-
-	template<> bool fromStringView<bool>(const std::string_view& str) {
-		uint8_t data = fromStringView<uint8_t>(str);
-		return (data != 0);
-	}
-	template<> UUID fromStringView<UUID>(const std::string_view& str) {
-		return UUID::fromString(str);
-	}
-	template<> HexString fromStringView<HexString>(const std::string_view& str) {
-		exceptAssert(str.size() % 2 == 0, "Invalid HexString!");
-		HexString result;
-		for (unsigned int i = 0; i < str.length(); i += 2) {
-			std::string byteString = std::string(str.substr(i, 2));
-			char byte = std::strtol(byteString.c_str(), NULL, 16);
-			result.data.push_back(byte);
-		}
-		return result;
-	}
-	template<> MacAddress fromStringView<MacAddress>(const std::string_view& str) {
-		if(str.length() == MacAddress::STRING_LENGTH_SHORT) {
-			return MacAddress::fromString(str);
-		} else {
-			return MacAddress::fromColonDelimitedString(str);
-		}
-	}
-
-	std::string ParameterAssembler::str() const { return stream.str(); }
-	// override for uint8_t because retarded c++ default stream outputs this
-	// as character instead of as number
-	template<> void ParameterAssembler::push<uint8_t>(uint8_t value) {
-		push<uint32_t>(value);
-	}
+std::string ParameterAssembler::str() const { return stream.str(); }
+// override for uint8_t because retarded c++ default stream outputs this
+// as character instead of as number
+template<> void ParameterAssembler::push<uint8_t>(uint8_t value) {
+	push<uint32_t>(value);
 }
 
 
