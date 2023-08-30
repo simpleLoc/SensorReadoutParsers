@@ -397,7 +397,7 @@ class SensorReadoutParser:
                                                  position=position)
                     elif lineStr == '[fingerprint:path]':
                         positions_str = header_map.get("positions")
-                        positions = parseVec3(positions_str) if positions_str is not None else None
+                        positions = [parseVec3(pos_str) for pos_str in positions_str]
                         fp = FingerprintPath(name=header_map["name"],
                                              floor_name=header_map.get("floorName"),
                                              floor_idx=int(header_map.get("floorIdx")),
@@ -427,7 +427,7 @@ class SensorReadoutParser:
 
     @staticmethod
     def __parse_header(file: _FileReader):
-        header_map: typing.Dict[str, str] = {}
+        header_map: typing.Dict[str, str | typing.List[str]] = {}
         while True:
             lookahead = file.lookahead()
 
@@ -439,6 +439,16 @@ class SensorReadoutParser:
             key, value = line.split("=", maxsplit=1)
             header_map[key] = value
 
+        array_map: typing.Dict[str, typing.List[str]] = {}
+        for key, value in header_map.items():
+            if key.endswith("[]"):
+                arr_key = key[0:len(key)-2]
+                arr = []
+                for i in range(0, int(value)):
+                    arr.append(header_map[arr_key+f"[{i}]"])
+                array_map[arr_key] = arr
+
+        header_map.update(array_map)
         return header_map
 
     def __process_data(self, file: _FileReader, sensorLookup: typing.Set[int]) -> SensorReadoutData:
