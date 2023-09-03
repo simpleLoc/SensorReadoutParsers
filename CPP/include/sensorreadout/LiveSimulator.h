@@ -20,6 +20,7 @@ namespace SensorReadoutParser {
 		std::vector<SensorEvent> evts;
 		std::thread simulationThread;
 		std::atomic<bool> shouldExit = false;
+		double playbackSpeed;
 		Callback callback;
 
 		// simulation state
@@ -29,7 +30,7 @@ namespace SensorReadoutParser {
 		Timestamp runningTime;
 
 	public:
-		LiveSimulator() {}
+		LiveSimulator(double playbackSpeed = 1.0) : playbackSpeed(playbackSpeed) {}
 		LiveSimulator(const std::vector<SensorEvent>& evts, Callback callback) {
 			setEvents(evts);
 			setCallback(callback);
@@ -48,7 +49,10 @@ namespace SensorReadoutParser {
 				for(size_t i = 0; i < evts.size(); ++i) {
 					if(shouldExit) { return; }
 					const auto& nextEvt = evts[i];
-					if (runningTime < nextEvt.timestamp) { std::this_thread::sleep_for(std::chrono::nanoseconds(nextEvt.timestamp - runningTime)); }
+					if (runningTime < nextEvt.timestamp) {
+						double sleepTimeNs = static_cast<double>(nextEvt.timestamp - runningTime) / playbackSpeed;
+						std::this_thread::sleep_for(std::chrono::nanoseconds(static_cast<int64_t>(sleepTimeNs)));
+					}
 					runningTime = nextEvt.timestamp;
 					callback(nextEvt);
 				}
