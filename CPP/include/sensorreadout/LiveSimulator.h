@@ -23,7 +23,10 @@ namespace SensorReadoutParser {
 		Callback callback;
 
 		// simulation state
-		std::chrono::steady_clock::time_point simulationStartTime;
+		// the advantage of not using absolute timestamps is that pausing the debugger
+		// will not make the application race on to catch up afterwards, and that it's
+		// easier to change the playback speed
+		Timestamp runningTime;
 
 	public:
 		LiveSimulator() {}
@@ -42,12 +45,11 @@ namespace SensorReadoutParser {
 		void start() {
 			shouldExit.store(false);
 			simulationThread = std::thread([&]() {
-				simulationStartTime = std::chrono::steady_clock::now();
 				for(size_t i = 0; i < evts.size(); ++i) {
 					if(shouldExit) { return; }
 					const auto& nextEvt = evts[i];
-					auto nextEvtTime = simulationStartTime + std::chrono::nanoseconds(nextEvt.timestamp);
-					std::this_thread::sleep_until(nextEvtTime);
+					if (runningTime < nextEvt.timestamp) { std::this_thread::sleep_for(std::chrono::nanoseconds(nextEvt.timestamp - runningTime)); }
+					runningTime = nextEvt.timestamp;
 					callback(nextEvt);
 				}
 			});
@@ -65,10 +67,7 @@ namespace SensorReadoutParser {
 		}
 
 		/** amount of nanoseconds that passed since the recording simulation started */
-		Timestamp runningTimeNs() const {
-			return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - simulationStartTime).count();
-		}
-
+		Timestamp runningTimeNs() const { return runningTime; }
 	};
 
 }
