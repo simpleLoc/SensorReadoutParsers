@@ -270,11 +270,13 @@ class FingerprintPosition(Fingerprint):
 class FingerprintPath(Fingerprint):
     def __init__(self,
                  name: str,
-                 floor_idx: int,
-                 floor_name: str,
+                 floor_idxs: [int],
+                 floor_names: [str],
                  points: typing.List[str] | None,
                  positions: typing.List[Vec3] | None):
-        super().__init__(name=name, floor_idx=floor_idx, floor_name=floor_name)
+        super().__init__(name=name, floor_idx=floor_idxs[0], floor_name=floor_names[0])
+        self.floor_idxs = floor_idxs
+        self.floor_names = floor_names
         self.points = points
         self.positions = positions
 
@@ -399,8 +401,8 @@ class SensorReadoutParser:
                         positions_str = header_map.get("positions")
                         positions = [parseVec3(pos_str) for pos_str in positions_str]
                         fp = FingerprintPath(name=header_map["name"],
-                                             floor_name=header_map.get("floorName"),
-                                             floor_idx=int(header_map.get("floorIdx")),
+                                             floor_idxs=[int(idx) for idx in header_map.get("floorIdxs")],
+                                             floor_names=header_map.get("floorNames"),
                                              points=header_map.get("points"),
                                              positions=positions)
                     else:
