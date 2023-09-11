@@ -16,7 +16,7 @@ template<> UUID fromStringView<UUID>(const std::string_view& str) {
 template<> HexString fromStringView<HexString>(const std::string_view& str) {
 	exceptAssert(str.size() % 2 == 0, "Invalid HexString!");
 	HexString result;
-	for (unsigned int i = 0; i < str.length(); i += 2) {
+	for (size_t i = 0; i < str.length(); i += 2) {
 		std::string byteString = std::string(str.substr(i, 2));
 		char byte = std::strtol(byteString.c_str(), NULL, 16);
 		result.data.push_back(byte);
@@ -56,7 +56,7 @@ static uint8_t parseHexNibble(char hex) {
 std::ostream& operator<<(std::ostream& output, const HexString& self) {
 	output << std::hex << std::uppercase << std::setfill( '0' );
 	for( uint8_t b : self.data ) {
-		output << std::setw( 2 ) << b;
+		output << std::setw(2) << static_cast<uint16_t>(b);
 	}
 	return output;
 }
