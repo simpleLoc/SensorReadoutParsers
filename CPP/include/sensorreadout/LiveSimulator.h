@@ -14,34 +14,39 @@ namespace SensorReadoutParser {
 	// ######################
 	class LiveSimulator {
 	public: // Associated types
-		using Callback = std::function<void(const SensorEvent&)>;
+		using SensorEventCallback = std::function<void(const SensorEvent&)>;
+		using RecordingEndedCallback = std::function<void()>;
 
 	private:
 		std::vector<SensorEvent> evts;
 		std::thread simulationThread;
 		std::atomic<bool> shouldExit = false;
 		double playbackSpeed;
-		Callback callback;
+		SensorEventCallback sensorEventCallback;
+		RecordingEndedCallback recordingEndedCallback;
 
 		// simulation state
 		// the advantage of not using absolute timestamps is that pausing the debugger
 		// will not make the application race on to catch up afterwards, and that it's
 		// easier to change the playback speed
-		Timestamp runningTime;
+		Timestamp runningTime = 0;
 
 	public:
+		/**
+		 * @brief LiveSimulator ctor
+		 * @param playbackSpeed Specifies a factor for the playback. (<= 0 means no artificial slowdown)
+		 */
 		LiveSimulator(double playbackSpeed = 1.0) : playbackSpeed(playbackSpeed) {}
-		LiveSimulator(const std::vector<SensorEvent>& evts, Callback callback) {
+		LiveSimulator(const std::vector<SensorEvent>& evts, SensorEventCallback callback) {
 			setEvents(evts);
-			setCallback(callback);
+			setSensorEventCallback(callback);
 		}
 
 		void setEvents(const std::vector<SensorEvent>& evts) {
 			this->evts = evts;
 		}
-		void setCallback(Callback callback) {
-			this->callback = callback;
-		}
+		void setSensorEventCallback(SensorEventCallback callback) { this->sensorEventCallback = callback; }
+		void setRecordingEndedCallback(RecordingEndedCallback callback) { this->recordingEndedCallback = callback; }
 
 		void start() {
 			shouldExit.store(false);
@@ -49,13 +54,14 @@ namespace SensorReadoutParser {
 				for(size_t i = 0; i < evts.size(); ++i) {
 					if(shouldExit) { return; }
 					const auto& nextEvt = evts[i];
-					if (runningTime < nextEvt.timestamp) {
+					if (runningTime < nextEvt.timestamp && playbackSpeed > 0) {
 						double sleepTimeNs = static_cast<double>(nextEvt.timestamp - runningTime) / playbackSpeed;
 						std::this_thread::sleep_for(std::chrono::nanoseconds(static_cast<int64_t>(sleepTimeNs)));
 					}
 					runningTime = nextEvt.timestamp;
-					callback(nextEvt);
+					if (sensorEventCallback) { this->sensorEventCallback(nextEvt); }
 				}
+				if (this->recordingEndedCallback) { this->recordingEndedCallback(); }
 			});
 		}
 
