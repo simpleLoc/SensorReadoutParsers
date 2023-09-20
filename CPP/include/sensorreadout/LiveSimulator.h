@@ -29,7 +29,7 @@ namespace SensorReadoutParser {
 		// the advantage of not using absolute timestamps is that pausing the debugger
 		// will not make the application race on to catch up afterwards, and that it's
 		// easier to change the playback speed
-		Timestamp runningTime = 0;
+		std::atomic<Timestamp> runningTime = 0;
 
 	public:
 		/**
