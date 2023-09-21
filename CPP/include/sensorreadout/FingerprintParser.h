@@ -38,13 +38,14 @@ namespace SensorReadoutParser {
 		std::unordered_map<std::string, std::string> parameters;
 		std::vector<SensorEvent> evts;
 
-		size_t getFloorIdx() const { return std::stoul(parameters.at("floorIdx")); }
-		std::string getFloorName() const { return parameters.at("floorName"); }
 
 		// point
 		std::array<double, 3> getPosition() const {
 			return ParameterParseHelper::parseVec3(parameters.at("position"));
 		}
+		size_t getFloorIdx() const { return std::stoul(parameters.at("floorIdx")); }
+		std::string getFloorName() const { return parameters.at("floorName"); }
+
 
 		// path
 		std::vector<std::string> getPointNames() const {
@@ -52,6 +53,12 @@ namespace SensorReadoutParser {
 		}
 		std::vector<std::array<double, 3>> getPositions() const {
 			return ParameterParseHelper::parseArray<std::array<double, 3>>(parameters, "positions", &ParameterParseHelper::parseVec3);
+		}
+		std::vector<size_t> getFloorIdcs() const {
+			return ParameterParseHelper::parseArray<size_t>(parameters, "floorIdxs", [](const auto& str) { return std::stoull(str); });
+		}
+		std::vector<std::string> getFloorNames() const {
+			return ParameterParseHelper::parseArray<std::string>(parameters, "floorNames", [](const auto& str) { return str; });
 		}
 	};
 
