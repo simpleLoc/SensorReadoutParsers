@@ -1,15 +1,15 @@
 #pragma once
 
+#include <fstream>
 #include <map>
 #include <string>
-#include <fstream>
 #include <unordered_set>
-#include <unordered_map>
 
 #include "SensorReadoutParser.h"
 
 namespace SensorReadoutParser {
 
+	using FingerprintParameters = std::map<std::string, std::string>;
 	enum class FingerprintType {
 		Point, Path
 	};
@@ -21,8 +21,8 @@ namespace SensorReadoutParser {
 			return result;
 		}
 		template<typename TItem, typename TItemParseFn>
-		static std::vector<TItem> parseArray(const std::unordered_map<std::string, std::string>& parameters, const std::string arrayName, TItemParseFn parseFn) {
-			size_t arrayLen = std::stoul(parameters.at(arrayName + "[]"));
+		static std::vector<TItem> parseArray(const FingerprintParameters& parameters, const std::string arrayName, TItemParseFn parseFn) {
+			size_t arrayLen = parseArrayLength(parameters, arrayName);
 			std::vector<TItem> result;
 			for(size_t i = 0; i < arrayLen; ++i) {
 				std::string itemStr = parameters.at(arrayName + "[" + std::to_string(i) + "]");
@@ -30,14 +30,37 @@ namespace SensorReadoutParser {
 			}
 			return result;
 		}
+		static size_t parseArrayLength(const FingerprintParameters& parameters, const std::string arrayName) {
+			size_t arrayLen = std::stoul(parameters.at(arrayName + "[]"));
+			return arrayLen;
+		}
+	};
+
+	struct ParameterSerializeHelper {
+		static std::string serializeVec3(const std::array<double, 3>& vec) {
+			return std::string("(") + std::to_string(vec[0]) + ";" + std::to_string(vec[1]) + ";" + std::to_string(vec[2]) + ")";
+		}
+
+		template<typename TItem, typename TItemMapFn>
+		static void serializeArray(FingerprintParameters& parameters, const std::string arrayName, const std::vector<TItem>& items, TItemMapFn itemMapFn) {
+			// remove previous existing items
+			std::erase_if(parameters, [&](const std::pair<std::string, std::string>& param) { return param.first.starts_with(arrayName + "["); });
+			parameters[arrayName + "[]"] = std::to_string(items.size());
+			for (size_t i = 0; i < items.size(); ++i) {
+				const auto& item = items[i];
+				std::string itemStr = itemMapFn(item);
+				parameters[arrayName + "[" + std::to_string(i) + "]"] = itemStr;
+			}
+		}
 	};
 
 	struct Fingerprint {
 		FingerprintType fpType;
 		std::string name;
-		std::unordered_map<std::string, std::string> parameters;
+		FingerprintParameters parameters;
 		std::vector<SensorEvent> evts;
 
+		// #### GETTERS ####
 
 		// point
 		std::array<double, 3> getPosition() const {
@@ -59,6 +82,17 @@ namespace SensorReadoutParser {
 		}
 		std::vector<std::string> getFloorNames() const {
 			return ParameterParseHelper::parseArray<std::string>(parameters, "floorNames", [](const auto& str) { return str; });
+		}
+
+
+		// #### SETTERS ####
+
+		// point
+		void setPosition(const std::array<double, 3>& pos) { parameters["position"] = ParameterSerializeHelper::serializeVec3(pos); }
+
+		// path
+		void setPositions(const std::vector<std::array<double, 3>>& positions) {
+			ParameterSerializeHelper::serializeArray(parameters, "positions", positions, &ParameterSerializeHelper::serializeVec3);
 		}
 	};
 
@@ -103,6 +137,9 @@ namespace SensorReadoutParser {
 	// # FingerprintParser
 	// ######################
 
+	/**
+	 * @brief Parser for Fingerprint recordings
+	 */
 	class FingerprintParser {
 
 	public:
@@ -180,4 +217,42 @@ namespace SensorReadoutParser {
 		}
 	};
 
-}
+
+
+	/**
+	 * @brief Serializer for Fingerprint recordings
+	 */
+	class FingerprintSerializer {
+	private: // Parser state
+		std::ostream& stream;
+		FileVersion fileVersion;
+
+	public: // API-Surface
+		FingerprintSerializer(std::ostream& stream, FileVersion fileVersion = FileVersion::V1) : stream(stream), fileVersion(fileVersion) {}
+
+		void serialize(const Fingerprints& fingerprints) {
+			for (const auto& fp : fingerprints) {
+				if (fp.fpType == FingerprintType::Path) {
+					stream << "[fingerprint:path]\n";
+				} else {
+					stream << "[fingerprint:point]\n";
+				}
+
+				// properties
+				for (const std::pair<std::string, std::string>& param : fp.parameters) {
+					stream << param.first << "=" << param.second << "\n";
+				}
+				stream << "\n";
+
+				{ // sensor data
+					Serializer evtSerialzer(stream, fileVersion);
+					for (const auto& evt : fp.evts) {
+						evtSerialzer.write(evt);
+					}
+					evtSerialzer.flush();
+				}
+				stream << "\n";
+			}
+		}
+	};
+} // namespace SensorReadoutParser
