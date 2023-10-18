@@ -311,6 +311,20 @@ void PedestrianActivityEvent::serializeInto(_internal::ParameterAssembler& strea
 	stream.push(rawActivityId);
 }
 
+void GroundTruthPosEvent::parse(const std::string& parameterString) {
+	Tokenizer<';'> tokenizer(parameterString);
+	x = tokenizer.nextAs<float>();
+	y = tokenizer.nextAs<float>();
+	z = tokenizer.nextAs<float>();
+	floorIdx = tokenizer.nextAs<size_t>();
+}
+void GroundTruthPosEvent::serializeInto(_internal::ParameterAssembler& stream) const {
+	stream.push(x);
+	stream.push(y);
+	stream.push(z);
+	stream.push(floorIdx);
+}
+
 void FileMetadataEvent::parse(const std::string& parameterString) {
 	Tokenizer<';'> tokenizer(parameterString);
 	date = tokenizer.next();
@@ -372,6 +386,7 @@ SensorEvent SensorEvent::parse(const RawSensorEvent& rawEvent) {
 		// Special events
 		SENSOR_EVENT_PARSE_CASE(EventType::PedestrianActivity, PedestrianActivityEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::GroundTruth, GroundTruthEvent)
+		SENSOR_EVENT_PARSE_CASE(EventType::GroundTruthPos, GroundTruthPosEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::GroundTruthPath, GroundTruthPathEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::FileMetadata, FileMetadataEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::RecordingId, RecordingIdEvent)
@@ -421,6 +436,7 @@ void SensorEvent::serializeInto(RawSensorEvent& rawEvent) const {
 		// Special events
 		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::PedestrianActivity, PedestrianActivityEvent)
 		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::GroundTruth, GroundTruthEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::GroundTruthPos, GroundTruthPosEvent)
 		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::GroundTruthPath, GroundTruthPathEvent)
 		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::FileMetadata, FileMetadataEvent)
 		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::RecordingId, RecordingIdEvent)

@@ -158,6 +158,7 @@ namespace SensorReadoutParser {
 	// ------
 	static constexpr EventId EVENTID_PEDESTRIAN_ACTIVITY = 50;
 	static constexpr EventId EVENTID_GROUND_TRUTH = 99;
+	static constexpr EventId EVENTID_GROUND_TRUTH_POS = 100;
 	static constexpr EventId EVENTID_GROUND_TRUTH_PATH = -1;
 	static constexpr EventId EVENTID_FILE_METADATA = -2;
 	static constexpr EventId EVENTID_RECORDING_ID = -3;
@@ -192,6 +193,7 @@ namespace SensorReadoutParser {
 		// Special events
 		PedestrianActivity = EVENTID_PEDESTRIAN_ACTIVITY,
 		GroundTruth = EVENTID_GROUND_TRUTH,
+		GroundTruthPos = EVENTID_GROUND_TRUTH_POS,
 		GroundTruthPath = EVENTID_GROUND_TRUTH_PATH,
 		FileMetadata = EVENTID_FILE_METADATA,
 		RecordingId = EVENTID_RECORDING_ID
@@ -404,6 +406,15 @@ namespace SensorReadoutParser {
 	struct GroundTruthEvent : public NumericSensorEventBase<1, size_t> {
 		size_t groundTruthId;
 	};
+	struct GroundTruthPosEvent  {
+		float x;
+		float y;
+		float z;
+		size_t floorIdx;
+
+		void parse(const std::string& parameterString);
+		void serializeInto(_internal::ParameterAssembler& stream) const;
+	};
 	struct GroundTruthPathEvent : public NumericSensorEventBase<2, size_t> {
 		size_t pathId;
 		size_t groundTruthPointCnt;
@@ -428,7 +439,7 @@ namespace SensorReadoutParser {
 	OrientationEvent, RotationMatrixEvent, WifiEvent, BLEEvent, RelativeHumidityEvent, OrientationOldEvent, RotationVectorEvent, LightEvent,
 	AmbientTemperatureEvent, HeartRateEvent, GPSEvent, WifiRTTEvent, GameRotationVectorEvent, EddystoneUIDEvent, DecawaveUWBEvent, StepDetectorEvent,
 	HeadingChangeEvent, FutureShapeSensFloorEvent, MicrophoneMetadataEvent,
-	PedestrianActivityEvent, GroundTruthEvent, GroundTruthPathEvent, FileMetadataEvent, RecordingIdEvent>;
+	PedestrianActivityEvent, GroundTruthEvent, GroundTruthPosEvent, GroundTruthPathEvent, FileMetadataEvent, RecordingIdEvent>;
 
 	struct SensorEvent {
 
