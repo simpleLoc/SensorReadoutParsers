@@ -155,6 +155,7 @@ namespace SensorReadoutParser {
 	static constexpr EventId EVENTID_HEADING_CHANGE = 22;
 	static constexpr EventId EVENTID_FUTURESHAPE_SENSFLOOR = 23;
 	static constexpr EventId EVENTID_MICROPHONE_METADATA = 24;
+	static constexpr EventId EVENTID_STEP_PROBABILITY = 25;
 	// ------
 	static constexpr EventId EVENTID_PEDESTRIAN_ACTIVITY = 50;
 	static constexpr EventId EVENTID_GROUND_TRUTH = 99;
@@ -190,6 +191,7 @@ namespace SensorReadoutParser {
 		HeadingChange = EVENTID_HEADING_CHANGE,
 		FutureShapeSensFloor = EVENTID_FUTURESHAPE_SENSFLOOR,
 		MicrophoneMetadata = EVENTID_MICROPHONE_METADATA,
+		StepProbability = EVENTID_STEP_PROBABILITY,
 		// Special events
 		PedestrianActivity = EVENTID_PEDESTRIAN_ACTIVITY,
 		GroundTruth = EVENTID_GROUND_TRUTH,
@@ -376,6 +378,14 @@ namespace SensorReadoutParser {
 		void parse(const std::string& parameterString);
 		void serializeInto(_internal::ParameterAssembler& stream) const;
 	};
+	struct StepProbabilityEvent {
+		Timestamp ts;
+		size_t id;
+		float probability;
+
+		void parse(const std::string& parameterString);
+		void serializeInto(_internal::ParameterAssembler& stream) const;
+	};
 
 
 	// #### Special Events ####
@@ -438,7 +448,7 @@ namespace SensorReadoutParser {
 	using EventData = std::variant<AccelerometerEvent, GravityEvent, LinearAccelerationEvent, GyroscopeEvent, MagneticFieldEvent, PressureEvent,
 	OrientationEvent, RotationMatrixEvent, WifiEvent, BLEEvent, RelativeHumidityEvent, OrientationOldEvent, RotationVectorEvent, LightEvent,
 	AmbientTemperatureEvent, HeartRateEvent, GPSEvent, WifiRTTEvent, GameRotationVectorEvent, EddystoneUIDEvent, DecawaveUWBEvent, StepDetectorEvent,
-	HeadingChangeEvent, FutureShapeSensFloorEvent, MicrophoneMetadataEvent,
+	HeadingChangeEvent, FutureShapeSensFloorEvent, MicrophoneMetadataEvent, StepProbabilityEvent,
 	PedestrianActivityEvent, GroundTruthEvent, GroundTruthPosEvent, GroundTruthPathEvent, FileMetadataEvent, RecordingIdEvent>;
 
 	struct SensorEvent {
