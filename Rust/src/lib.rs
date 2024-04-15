@@ -43,6 +43,8 @@ pub enum EventType {
 	StepDetector = 21,
 	HeadingChange = 22,
 	FutureShapeSensFloor = 23,
+	MicrophoneMetadata = 24,
+	StepProbability = 25,
 	// Special events
 	PedestrianActivity = 50,
 	GroundTruth = 99,
