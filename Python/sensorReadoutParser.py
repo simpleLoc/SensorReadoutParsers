@@ -35,6 +35,7 @@ class SensorEventId(Enum):
     DECAWAVE_UWB = 20
     STEP_DETECTOR = 21
     HEADING_CHANGE = 22
+    STEP_PROBABILITY = 25
 
     # Special non Sensor events
     PEDESTRIAN_ACTIVITY = 50
@@ -191,6 +192,13 @@ class SensorReadoutSchema:
                 'eventIdx': pa.Column(int),
                 'timestamp': pa.Column(int),
                 'headingChangeInRad': pa.Column(float),
+            }),
+            SensorEventId.STEP_PROBABILITY: pa.DataFrameSchema({
+                'eventIdx': pa.Column(int),
+                'timestamp': pa.Column(int),
+                'stepTs': pa.Column(int),
+                'stepId': pa.Column(int),
+                'probability': pa.Column(float),
             }),
             SensorEventId.PEDESTRIAN_ACTIVITY: pa.DataFrameSchema({
                 'eventIdx': pa.Column(int),
