@@ -14,8 +14,19 @@
 
 #include "Tokenizer.h"
 
-namespace SensorReadoutParser {
+inline std::ostream& operator<<(std::ostream& os, const std::vector<float>& vec) {
+	os << "[";
+	for (size_t i = 0; i < vec.size(); ++i) {
+		os << vec[i];
+		if (i != vec.size() - 1) {
+			os << ", ";
+		}
+	}
+	os << "]";
+	return os;
+}
 
+namespace SensorReadoutParser {
 	// ###########
 	// # BaseTypes
 	// ######################
@@ -156,6 +167,7 @@ namespace SensorReadoutParser {
 	static constexpr EventId EVENTID_FUTURESHAPE_SENSFLOOR = 23;
 	static constexpr EventId EVENTID_MICROPHONE_METADATA = 24;
 	static constexpr EventId EVENTID_STEP_PROBABILITY = 25;
+	static constexpr EventId EVENTID_CIR_5G = 26;
 	// ------
 	static constexpr EventId EVENTID_PEDESTRIAN_ACTIVITY = 50;
 	static constexpr EventId EVENTID_GROUND_TRUTH = 99;
@@ -192,6 +204,7 @@ namespace SensorReadoutParser {
 		FutureShapeSensFloor = EVENTID_FUTURESHAPE_SENSFLOOR,
 		MicrophoneMetadata = EVENTID_MICROPHONE_METADATA,
 		StepProbability = EVENTID_STEP_PROBABILITY,
+		CIR5G = EVENTID_CIR_5G,
 		// Special events
 		PedestrianActivity = EVENTID_PEDESTRIAN_ACTIVITY,
 		GroundTruth = EVENTID_GROUND_TRUTH,
@@ -386,6 +399,14 @@ namespace SensorReadoutParser {
 		void parse(const std::string& parameterString);
 		void serializeInto(_internal::ParameterAssembler& stream) const;
 	};
+	struct CIR5GEvent {
+		std::string baseStationId;
+		std::vector<float> real;
+		std::vector<float> imag;
+
+		void parse(const std::string& prameterString);
+		void serializeInto(_internal::ParameterAssembler& stream) const;
+	};
 
 
 	// #### Special Events ####
@@ -448,7 +469,7 @@ namespace SensorReadoutParser {
 	using EventData = std::variant<AccelerometerEvent, GravityEvent, LinearAccelerationEvent, GyroscopeEvent, MagneticFieldEvent, PressureEvent,
 	OrientationEvent, RotationMatrixEvent, WifiEvent, BLEEvent, RelativeHumidityEvent, OrientationOldEvent, RotationVectorEvent, LightEvent,
 	AmbientTemperatureEvent, HeartRateEvent, GPSEvent, WifiRTTEvent, GameRotationVectorEvent, EddystoneUIDEvent, DecawaveUWBEvent, StepDetectorEvent,
-	HeadingChangeEvent, FutureShapeSensFloorEvent, MicrophoneMetadataEvent, StepProbabilityEvent,
+	HeadingChangeEvent, FutureShapeSensFloorEvent, MicrophoneMetadataEvent, StepProbabilityEvent, CIR5GEvent,
 	PedestrianActivityEvent, GroundTruthEvent, GroundTruthPosEvent, GroundTruthPathEvent, FileMetadataEvent, RecordingIdEvent>;
 
 	struct SensorEvent {

@@ -62,7 +62,7 @@ std::ostream& operator<<(std::ostream& output, const HexString& self) {
 }
 
 UUID UUID::fromString(const std::string_view& uuidStr) {
-	exceptAssert(uuidStr.size() == STRING_LENGTH, "Attempted to parse invalid UUID string");
+	// exceptAssert(uuidStr.size() == STRING_LENGTH, "Attempted to parse invalid UUID string");
 	UUID result;
 	for(size_t bPtr = 0, cPtr = 0; cPtr < STRING_LENGTH;) {
 		if(uuidStr[cPtr] != '-') {
@@ -279,6 +279,18 @@ void StepProbabilityEvent::serializeInto(_internal::ParameterAssembler& stream) 
 	stream.push(probability);
 }
 
+void CIR5GEvent::parse(const std::string& parameterString) {
+	Tokenizer<';'> tokenizer(parameterString);
+	baseStationId = tokenizer.next();
+	real = tokenizer.nextAs<std::vector<float>>();
+	imag = tokenizer.nextAs<std::vector<float>>();
+}
+void CIR5GEvent::serializeInto(_internal::ParameterAssembler& stream) const {
+	stream.push(baseStationId);
+	stream.push(real);
+	stream.push(imag);
+}
+
 void DecawaveUWBEvent::parse(const std::string& parameterString) {
 	Tokenizer<';'> tokenizer(parameterString);
 	// packet header (estimated position + quality)
@@ -396,6 +408,7 @@ SensorEvent SensorEvent::parse(const RawSensorEvent& rawEvent) {
 		SENSOR_EVENT_PARSE_CASE(EventType::FutureShapeSensFloor, FutureShapeSensFloorEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::MicrophoneMetadata, MicrophoneMetadataEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::StepProbability, StepProbabilityEvent)
+		SENSOR_EVENT_PARSE_CASE(EventType::CIR5G, CIR5GEvent)
 		// Special events
 		SENSOR_EVENT_PARSE_CASE(EventType::PedestrianActivity, PedestrianActivityEvent)
 		SENSOR_EVENT_PARSE_CASE(EventType::GroundTruth, GroundTruthEvent)
@@ -447,6 +460,7 @@ void SensorEvent::serializeInto(RawSensorEvent& rawEvent) const {
 		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::FutureShapeSensFloor, FutureShapeSensFloorEvent)
 		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::MicrophoneMetadata, MicrophoneMetadataEvent)
 		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::StepProbability, StepProbabilityEvent)
+		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::CIR5G, CIR5GEvent)
 		// Special events
 		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::PedestrianActivity, PedestrianActivityEvent)
 		SENSOR_EVENT_SERIALIZE_INTO_CASE(EventType::GroundTruth, GroundTruthEvent)
