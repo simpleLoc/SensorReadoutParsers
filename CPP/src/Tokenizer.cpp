@@ -46,4 +46,23 @@ namespace SensorReadoutParser {
 		return (data != 0);
 	}
 
+	template<> std::vector<float> fromStringView<std::vector<float>>(const std::string_view& str) {
+		std::vector<float> result;
+		if (str.size() >= 2 && str.front() == '[' && str.back() == ']') {
+			auto content = str.substr(1, str.size() - 2);
+			std::string_view::size_type start = 0;
+			std::string_view::size_type end;
+			while ((end = content.find(',', start)) != std::string_view::npos) {
+				std::string_view token = content.substr(start, end - start);
+				result.push_back(std::strtof(token.data(), nullptr));
+				start = end + 1;
+			}
+			if (start < content.size()) {
+				std::string_view token = content.substr(start);
+				result.push_back(std::strtof(token.data(), nullptr));
+			}
+		}
+		return result;
+	}
+
 }

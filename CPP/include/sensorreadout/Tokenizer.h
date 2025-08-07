@@ -5,6 +5,7 @@
 #include <string>
 #include <optional>
 #include <cstdint>
+#include <vector>
 
 #include "Assert.h"
 #include "ParseLocaleContext.h"
@@ -116,5 +117,5 @@ namespace SensorReadoutParser {
 	template<> int64_t fromStringView(const std::string_view&);
 	template<> float fromStringView(const std::string_view&);
 	template<> double fromStringView(const std::string_view&);
-
+	template<> std::vector<float> fromStringView(const std::string_view&);
 }
