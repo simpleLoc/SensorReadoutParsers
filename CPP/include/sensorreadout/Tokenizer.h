@@ -34,7 +34,7 @@ namespace SensorReadoutParser {
 		 */
 		Tokenizer(const std::string_view str) : str(str), ptr((str.length() == 0) ? 1 : 0) {}
 		~Tokenizer() noexcept(false) {
-			exceptAssert(ptr >= str.length(), "Remaining unparsed tokens. This is regarded as error.");
+			//exceptAssert(ptr >= str.length(), "Remaining unparsed tokens. This is regarded as error.");
 		}
 
 		std::optional<std::string_view> peekNext() {

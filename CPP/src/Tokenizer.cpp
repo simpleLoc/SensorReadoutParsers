@@ -8,7 +8,7 @@ namespace SensorReadoutParser {
 	template<> NumberType fromStringView(const std::string_view& str) { \
 			NumberType result; \
 			auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.size(), result); \
-			exceptAssert(ec == std::errc(), "Failed to parse token to value"); \
+			exceptAssert(ec == std::errc(), "Failed to parse token to value" + std::string(str)); \
 			return result; \
 	}
 
