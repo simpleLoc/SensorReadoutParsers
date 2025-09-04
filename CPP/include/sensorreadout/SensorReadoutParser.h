@@ -172,6 +172,7 @@ namespace SensorReadoutParser {
 	static constexpr EventId EVENTID_PEDESTRIAN_ACTIVITY = 50;
 	static constexpr EventId EVENTID_GROUND_TRUTH = 99;
 	static constexpr EventId EVENTID_GROUND_TRUTH_POS = 100;
+	static constexpr EventId EVENTID_PREDICTED_POS = 101;
 	static constexpr EventId EVENTID_GROUND_TRUTH_PATH = -1;
 	static constexpr EventId EVENTID_FILE_METADATA = -2;
 	static constexpr EventId EVENTID_RECORDING_ID = -3;
@@ -209,6 +210,7 @@ namespace SensorReadoutParser {
 		PedestrianActivity = EVENTID_PEDESTRIAN_ACTIVITY,
 		GroundTruth = EVENTID_GROUND_TRUTH,
 		GroundTruthPos = EVENTID_GROUND_TRUTH_POS,
+		PredictedPos = EVENTID_PREDICTED_POS,
 		GroundTruthPath = EVENTID_GROUND_TRUTH_PATH,
 		FileMetadata = EVENTID_FILE_METADATA,
 		RecordingId = EVENTID_RECORDING_ID
@@ -437,7 +439,7 @@ namespace SensorReadoutParser {
 	struct GroundTruthEvent : public NumericSensorEventBase<1, size_t> {
 		size_t groundTruthId;
 	};
-	struct GroundTruthPosEvent  {
+	struct PosEvent  {
 		float x;
 		float y;
 		float z;
@@ -470,7 +472,7 @@ namespace SensorReadoutParser {
 	OrientationEvent, RotationMatrixEvent, WifiEvent, BLEEvent, RelativeHumidityEvent, OrientationOldEvent, RotationVectorEvent, LightEvent,
 	AmbientTemperatureEvent, HeartRateEvent, GPSEvent, WifiRTTEvent, GameRotationVectorEvent, EddystoneUIDEvent, DecawaveUWBEvent, StepDetectorEvent,
 	HeadingChangeEvent, FutureShapeSensFloorEvent, MicrophoneMetadataEvent, StepProbabilityEvent, CIR5GEvent,
-	PedestrianActivityEvent, GroundTruthEvent, GroundTruthPosEvent, GroundTruthPathEvent, FileMetadataEvent, RecordingIdEvent>;
+	PedestrianActivityEvent, GroundTruthEvent, PosEvent, GroundTruthPathEvent, FileMetadataEvent, RecordingIdEvent>;
 
 	struct SensorEvent {
 
