@@ -57,19 +57,12 @@ class PedestrianActivity(Enum):
 
 
 class SensorReadoutSchema:
-    class __FastDtypeCheck:
-        def __init__(self):
-            # Hack: Get dtypes for Columns to improve type checking in the hot path
-            self.bool = pa.Column(bool).dtype
-            self.int8 = pa.Column(pa.dtypes.Int8).dtype
-            self.int16 = pa.Column(pa.dtypes.Int16).dtype
-            self.int = pa.Column(int).dtype
-            self.float = pa.Column(float).dtype
-            self.string = pa.Column(str).dtype
+    TYPE_Float = 0
+    TYPE_Str = 1
+    TYPE_Int = 2
+    TYPE_Bool = 3
 
     def __init__(self):
-        self.dtypes = self.__FastDtypeCheck()
-
         self.eventsChronologically = pa.DataFrameSchema({
             'eventIdx': pa.Column(int),
             'timestamp': pa.Column(int),
@@ -231,6 +224,9 @@ class SensorReadoutSchema:
             }),
         }
 
+        # Build type lookup dict for faster type checking in hot path
+        self.schemaLookup = self.__buildSchemaLookup()
+
     @staticmethod
     def _createXYZSchema():
         return pa.DataFrameSchema({
@@ -240,6 +236,29 @@ class SensorReadoutSchema:
             'Y': pa.Column(float),
             'Z': pa.Column(float),
         })
+    
+    def __buildSchemaLookup(self) -> typing.Dict[SensorEventId, typing.List[int]]:
+        result = {}
+
+        for (sensorId, sensorSchema) in self.sensors.items():
+            types = []
+
+            for col in sensorSchema.columns.values():
+                if pa.dtypes.is_float(col.dtype):
+                    types.append(SensorReadoutSchema.TYPE_Float)
+                elif pa.dtypes.is_string(col.dtype):
+                    types.append(SensorReadoutSchema.TYPE_Str)
+                elif pa.dtypes.is_int(col.dtype):
+                    types.append(SensorReadoutSchema.TYPE_Int)
+                elif pa.dtypes.is_bool(col.dtype):
+                    types.append(SensorReadoutSchema.TYPE_Bool)
+                else:
+                    raise Exception(f'Invalid column type "{col.dtype}" for "{sensorId}"')
+            
+            result[sensorId] = types
+        
+        return result
+
 
 
 class FileMetadata:
@@ -528,6 +547,7 @@ class SensorReadoutParser:
 
     def __process_line(self, event_index: int, eventId: SensorEventId, parts: typing.List[str]):
         schema = self.schema.sensors[eventId]
+        schemaTypes = self.schema.schemaLookup[eventId]
 
         sensordata = []
         uwbDists = None
@@ -538,20 +558,20 @@ class SensorReadoutParser:
                 continue
 
             part = parts[colIndex]
-            col_dtype = col.dtype
+            typeId = schemaTypes[colIndex]
 
-            # Using pa.dtypes.is_subdtype() (e.g. pa.dtypes.is_int() etc.) is the right way to check the dtype
-            # However, this is the hot path and is_subdtype() slows down the parser significantly.
-            if col_dtype == self.schema.dtypes.float:
+            # Use precomputed integer values instead of Pandas functions for type checking.
+            # The use of dtypes is too slow in this hot path.
+            if typeId == SensorReadoutSchema.TYPE_Float:
                 sensordata.append(float(part))
-            elif col_dtype == self.schema.dtypes.string:
+            elif typeId == SensorReadoutSchema.TYPE_Str:
                 sensordata.append(str(part))
-            elif col_dtype == self.schema.dtypes.int or col_dtype == self.schema.dtypes.int8:
+            elif typeId == SensorReadoutSchema.TYPE_Int:
                 sensordata.append(int(part))
-            elif col_dtype == self.schema.dtypes.bool:
+            elif typeId == SensorReadoutSchema.TYPE_Bool:
                 sensordata.append(bool(part))
             else:
-                raise Exception(f'Invalid column type "{col_dtype}" for "{eventId}"')
+                raise Exception(f'Invalid column type id "{typeId}" for "{eventId}"')
 
         # Special handling UWB
         if eventId == SensorEventId.DECAWAVE_UWB:
