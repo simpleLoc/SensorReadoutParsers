@@ -1,16 +1,16 @@
 #pragma once
 
 #include <array>
-#include <cinttypes>
 #include <charconv>
+#include <cinttypes>
+#include <cstring>
+#include <istream>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <string_view>
-#include <cstring>
-#include <sstream>
-#include <istream>
-#include <vector>
 #include <variant>
+#include <vector>
 
 #include "Tokenizer.h"
 
@@ -18,9 +18,7 @@ inline std::ostream& operator<<(std::ostream& os, const std::vector<float>& vec)
 	os << "[";
 	for (size_t i = 0; i < vec.size(); ++i) {
 		os << vec[i];
-		if (i != vec.size() - 1) {
-			os << ", ";
-		}
+		if (i != vec.size() - 1) { os << ", "; }
 	}
 	os << "]";
 	return os;
@@ -44,7 +42,7 @@ namespace SensorReadoutParser {
 
 	struct UUID {
 		static constexpr size_t UUID_LENGTH = 16;
-		static constexpr size_t STRING_LENGTH = 16*2 + 4;
+		static constexpr size_t STRING_LENGTH = 16 * 2 + 4;
 
 		std::array<uint8_t, UUID_LENGTH> data;
 
@@ -111,9 +109,12 @@ namespace SensorReadoutParser {
 	// # Helpers
 	// ######################
 
-	template<> UUID fromStringView(const std::string_view&);
-	template<> HexString fromStringView(const std::string_view&);
-	template<> MacAddress fromStringView(const std::string_view&);
+	template<>
+	UUID fromStringView(const std::string_view&);
+	template<>
+	HexString fromStringView(const std::string_view&);
+	template<>
+	MacAddress fromStringView(const std::string_view&);
 
 	namespace _internal {
 
@@ -122,18 +123,17 @@ namespace SensorReadoutParser {
 			std::ostringstream stream;
 
 		public:
-			ParameterAssembler() {
-				stream.precision(15);
-			}
-			template<typename TValue> void push(TValue value) {
-				if(stream.tellp() > 0) { stream << ';'; }
+			ParameterAssembler() { stream.precision(15); }
+			template<typename TValue>
+			void push(TValue value) {
+				if (stream.tellp() > 0) { stream << ';'; }
 				stream << value;
 			}
 
 			std::string str() const;
 		};
 
-	}
+	} // namespace _internal
 
 
 	// ###########
@@ -228,7 +228,6 @@ namespace SensorReadoutParser {
 
 
 
-
 	// ###########
 	// # ParsedModels (bases)
 	// ######################
@@ -236,7 +235,7 @@ namespace SensorReadoutParser {
 	struct NumericSensorEventBase {
 		using NumericValue = TNumericValue;
 
-		//static_assert (sizeof(Self) == (sizeof(NumericValue) * ARG_CNT), "Struct size and argument count do not match.");
+		// static_assert (sizeof(Self) == (sizeof(NumericValue) * ARG_CNT), "Struct size and argument count do not match.");
 
 		template<const size_t ARGIDX>
 		NumericValue& getValue() {
@@ -252,14 +251,14 @@ namespace SensorReadoutParser {
 		void parse(const std::string& parameterString) {
 			NumericValue* resultPtr = reinterpret_cast<NumericValue*>(this);
 			Tokenizer<';'> tokenizer(parameterString);
-			for(size_t i = 0; i < ARG_CNT; ++i) {
+			for (size_t i = 0; i < ARG_CNT; ++i) {
 				resultPtr[i] = tokenizer.nextAs<NumericValue>();
 			}
 		}
 
 		void serializeInto(_internal::ParameterAssembler& stream) const {
 			const NumericValue* resultPtr = reinterpret_cast<const NumericValue*>(this);
-			for(size_t i = 0; i < ARG_CNT; ++i) {
+			for (size_t i = 0; i < ARG_CNT; ++i) {
 				stream.push(resultPtr[i]);
 			}
 		}
@@ -417,11 +416,11 @@ namespace SensorReadoutParser {
 		PedestrianActivityId rawActivityId;
 		std::string rawActivityName;
 
-		static PedestrianActivityEvent from(PedestrianActivity activity)  {
+		static PedestrianActivityEvent from(PedestrianActivity activity) {
 			PedestrianActivityEvent result;
 			result.activity = activity;
 			result.rawActivityId = static_cast<PedestrianActivityId>(activity);
-			switch(activity) {
+			switch (activity) {
 				case PedestrianActivity::Walking: result.rawActivityName = "WALKING"; break;
 				case PedestrianActivity::Standing: result.rawActivityName = "STANDING"; break;
 				case PedestrianActivity::StairsUp: result.rawActivityName = "STAIRS_UP"; break;
@@ -439,7 +438,7 @@ namespace SensorReadoutParser {
 	struct GroundTruthEvent : public NumericSensorEventBase<1, size_t> {
 		size_t groundTruthId;
 	};
-	struct PosEvent  {
+	struct PosEvent {
 		float x;
 		float y;
 		float z;
@@ -448,10 +447,14 @@ namespace SensorReadoutParser {
 		void parse(const std::string& parameterString);
 		void serializeInto(_internal::ParameterAssembler& stream) const;
 	};
-	struct GroundTruthPathEvent : public NumericSensorEventBase<2, size_t> {
-		size_t pathId;
+	struct GroundTruthPathEvent {
+		std::string pathId;
 		size_t groundTruthPointCnt;
+
+		void parse(const std::string& parameterString);
+		void serializeInto(_internal::ParameterAssembler& stream) const;
 	};
+	
 	struct FileMetadataEvent {
 		std::string date;
 		std::string person;
@@ -468,14 +471,14 @@ namespace SensorReadoutParser {
 	};
 
 
-	using EventData = std::variant<AccelerometerEvent, GravityEvent, LinearAccelerationEvent, GyroscopeEvent, MagneticFieldEvent, PressureEvent,
-	OrientationEvent, RotationMatrixEvent, WifiEvent, BLEEvent, RelativeHumidityEvent, OrientationOldEvent, RotationVectorEvent, LightEvent,
-	AmbientTemperatureEvent, HeartRateEvent, GPSEvent, WifiRTTEvent, GameRotationVectorEvent, EddystoneUIDEvent, DecawaveUWBEvent, StepDetectorEvent,
-	HeadingChangeEvent, FutureShapeSensFloorEvent, MicrophoneMetadataEvent, StepProbabilityEvent, CIR5GEvent,
-	PedestrianActivityEvent, GroundTruthEvent, PosEvent, GroundTruthPathEvent, FileMetadataEvent, RecordingIdEvent>;
+	using EventData = std::variant<
+		AccelerometerEvent, GravityEvent, LinearAccelerationEvent, GyroscopeEvent, MagneticFieldEvent, PressureEvent, OrientationEvent, RotationMatrixEvent,
+		WifiEvent, BLEEvent, RelativeHumidityEvent, OrientationOldEvent, RotationVectorEvent, LightEvent, AmbientTemperatureEvent, HeartRateEvent, GPSEvent,
+		WifiRTTEvent, GameRotationVectorEvent, EddystoneUIDEvent, DecawaveUWBEvent, StepDetectorEvent, HeadingChangeEvent, FutureShapeSensFloorEvent,
+		MicrophoneMetadataEvent, StepProbabilityEvent, CIR5GEvent, PedestrianActivityEvent, GroundTruthEvent, PosEvent, GroundTruthPathEvent, FileMetadataEvent,
+		RecordingIdEvent>;
 
 	struct SensorEvent {
-
 		Timestamp timestamp;
 		EventType eventType;
 		EventData data;
@@ -549,4 +552,4 @@ namespace SensorReadoutParser {
 
 		void flush();
 	};
-}
+} // namespace SensorReadoutParser

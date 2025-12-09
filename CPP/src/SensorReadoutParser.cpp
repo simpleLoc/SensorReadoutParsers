@@ -369,6 +369,17 @@ void RecordingIdEvent::serializeInto(_internal::ParameterAssembler& stream) cons
 	stream.push(recordingId.toString());
 }
 
+void GroundTruthPathEvent::parse(const std::string& parameterString) {
+	Tokenizer<';'> tokenizer(parameterString);
+	pathId = tokenizer.next();
+	groundTruthPointCnt = tokenizer.nextAs<size_t>();
+}
+
+void GroundTruthPathEvent::serializeInto(_internal::ParameterAssembler& stream) const {
+	stream.push(pathId);
+	stream.push(groundTruthPointCnt);
+}
+
 SensorEvent SensorEvent::parse(const RawSensorEvent& rawEvent) {
 	#define SENSOR_EVENT_PARSE_CASE(EvtType, EvtStruct) \
 		case EvtType: { \
