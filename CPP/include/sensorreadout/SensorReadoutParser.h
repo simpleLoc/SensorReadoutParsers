@@ -176,6 +176,7 @@ namespace SensorReadoutParser {
 	static constexpr EventId EVENTID_GROUND_TRUTH_PATH = -1;
 	static constexpr EventId EVENTID_FILE_METADATA = -2;
 	static constexpr EventId EVENTID_RECORDING_ID = -3;
+	static constexpr EventId EVENTID_DEVICE_INFO = -4;
 
 	enum class EventType : EventId {
 		// Sensor events
@@ -213,7 +214,8 @@ namespace SensorReadoutParser {
 		PredictedPos = EVENTID_PREDICTED_POS,
 		GroundTruthPath = EVENTID_GROUND_TRUTH_PATH,
 		FileMetadata = EVENTID_FILE_METADATA,
-		RecordingId = EVENTID_RECORDING_ID
+		RecordingId = EVENTID_RECORDING_ID,
+		DeviceInfo = EVENTID_DEVICE_INFO
 	};
 
 	enum class PedestrianActivity : PedestrianActivityId {
@@ -463,10 +465,20 @@ namespace SensorReadoutParser {
 		void parse(const std::string& parameterString);
 		void serializeInto(_internal::ParameterAssembler& stream) const;
 	};
+
 	struct RecordingIdEvent {
 		UUID recordingId;
 
 		void parse(const std::string& prameterString);
+		void serializeInto(_internal::ParameterAssembler& stream) const;
+	};
+
+	struct DeviceInfoEvent {
+		std::string manufacturer;
+		std::string model;
+		std::string customModel;
+
+		void parse(const std::string& parameterString);
 		void serializeInto(_internal::ParameterAssembler& stream) const;
 	};
 
@@ -476,7 +488,7 @@ namespace SensorReadoutParser {
 		WifiEvent, BLEEvent, RelativeHumidityEvent, OrientationOldEvent, RotationVectorEvent, LightEvent, AmbientTemperatureEvent, HeartRateEvent, GPSEvent,
 		WifiRTTEvent, GameRotationVectorEvent, EddystoneUIDEvent, DecawaveUWBEvent, StepDetectorEvent, HeadingChangeEvent, FutureShapeSensFloorEvent,
 		MicrophoneMetadataEvent, StepProbabilityEvent, CIR5GEvent, PedestrianActivityEvent, GroundTruthEvent, PosEvent, GroundTruthPathEvent, FileMetadataEvent,
-		RecordingIdEvent>;
+		RecordingIdEvent, DeviceInfoEvent>;
 
 	struct SensorEvent {
 		Timestamp timestamp;
